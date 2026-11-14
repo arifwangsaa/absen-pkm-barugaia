@@ -1,0 +1,29 @@
+name: Auto-Absen Alpa ASN PKM Barugaia
+
+on:
+  schedule:
+    # Pukul 15:00 WITA (07:00 UTC) setiap hari Senin - Sabtu
+    - cron: '0 7 * * 1-6'
+  # Memungkinkan dijalankan manual lewat tombol "Run workflow" di tab Actions
+  workflow_dispatch:
+
+jobs:
+  auto-absen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase Admin SDK
+        run: npm install --no-save firebase-admin
+
+      - name: Jalankan Skrip Auto-Absen & Rekap Alpa
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_DATABASE_URL: "https://e-absenpkmbarugaia-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        run: node scripts/auto-absen.js
