@@ -7,6 +7,10 @@ on:
   # Memungkinkan dijalankan manual lewat tombol "Run workflow" di tab Actions
   workflow_dispatch:
 
+# Wajib ditambahkan agar GitHub Actions diizinkan melakukan auto-commit
+permissions:
+  contents: write
+
 jobs:
   auto-absen:
     runs-on: ubuntu-latest
@@ -27,3 +31,12 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_DATABASE_URL: "https://e-absenpkmbarugaia-default-rtdb.asia-southeast1.firebasedatabase.app/"
         run: node scripts/auto-absen.js
+
+      - name: Reset Timer Inaktivitas 60 Hari (Auto-Commit)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          TZ='Asia/Makassar' date +"Terakhir berjalan: %Y-%m-%d %H:%M:%S WITA" > cron-heartbeat.txt
+          git add cron-heartbeat.txt
+          git commit -m "chore: update med-sync cron heartbeat [skip ci]" || exit 0
+          git push
