@@ -809,6 +809,9 @@
                     <button onclick="openModalHolidays()" class="glow-btn px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white text-[11px] sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-calendar-day"></i> Hari Libur
                     </button>
+                    <button onclick="openModalJagaSchedule()" class="glow-btn px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-[11px] sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-calendar-check"></i> Jadwal Jaga
+                    </button>
                     <button onclick="openModalZipDownloadOptions()" class="glow-btn px-3 py-2 bg-teal-600 hover:bg-teal-500 text-white text-[11px] sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-file-zipper"></i> ZIP Barcode NIP
                     </button>
@@ -1059,39 +1062,303 @@
     </footer>
     <!-- MODAL SKRIP / INFO BACKEND CRON -->
     <div id="modal-cloud-function" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden p-4">
-        <div class="glass-panel p-5 sm:p-6 rounded-3xl max-w-2xl w-full border border-teal-500/35 relative shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl max-w-3xl w-full border border-teal-500/35 relative shadow-2xl max-h-[90vh] flex flex-col">
             <button onclick="closeModalCloudFunctionCode()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
             <h3 class="font-orbitron font-bold text-base sm:text-lg text-white mb-1 flex items-center gap-2">
                 <i class="fa-solid fa-server text-teal-400"></i> System Actions Cron Job (UPT Puskesmas Barugaia)
             </h3>
-            <p class="text-xs text-cyan-100/75 mb-3">Sistem Auto-Rekap &amp; Auto-Alpa berjalan otomatis di server cloud setiap hari kerja.</p>
+            <p class="text-xs text-cyan-100/75 mb-3">Sistem Auto-Rekap &amp; Auto-Alpa berjalan otomatis di server GitHub Actions untuk <strong>Absen Reguler (15.00 WITA)</strong> serta <strong>Datang Jaga &amp; Lepas Jaga (14.15 &amp; 20.15 WITA)</strong>.</p>
             
-            <div class="relative bg-slate-950 p-3 rounded-xl border border-slate-800 overflow-y-auto font-mono text-[11px] text-teal-300 flex-grow mb-3">
-                <button onclick="copyCloudFunctionCode()" class="absolute top-3 right-3 px-2.5 py-1 bg-teal-600 hover:bg-teal-500 text-white text-[10px] font-bold rounded-lg shadow">
+            <div class="relative bg-slate-950 p-3.5 rounded-xl border border-slate-800 overflow-y-auto font-mono text-[11px] leading-relaxed text-teal-300 flex-grow mb-3">
+                <button onclick="copyCloudFunctionCode()" class="sticky top-0 float-right ml-2 mb-1 z-10 px-2.5 py-1 bg-teal-600 hover:bg-teal-500 text-white text-[10px] font-bold rounded-lg shadow">
                     <i class="fa-solid fa-copy mr-1"></i> Salin Skrip
                 </button>
-                <pre id="cloud-function-code-snippet">
-name: Auto-Absen Alpa ASN PKM Barugaia
+                <pre id="cloud-function-code-snippet" class="whitespace-pre overflow-x-auto">name: Auto-Absen Alpa Reguler &amp; Jaga ASN PKM Barugaia
 
 on:
   schedule:
-    - cron: '0 7 * * 1-6' # Pukul 15:00 WITA (07:00 UTC) Senin - Sabtu
+    - cron: &#x27;15 6 * * *&#x27;   # Pukul 14:15 WITA (06:15 UTC) - Cek Shift 1 Jaga (Setiap Hari)
+    - cron: &#x27;0 7 * * 1-6&#x27;  # Pukul 15:00 WITA (07:00 UTC) - Cek Absen Reguler (Senin - Sabtu)
+    - cron: &#x27;15 12 * * *&#x27;  # Pukul 20:15 WITA (12:15 UTC) - Cek Shift 2 Jaga (Setiap Hari)
   workflow_dispatch:
+    inputs:
+      target_mode:
+        description: &#x27;Mode Eksekusi (auto / reguler / shift1 / shift2)&#x27;
+        required: false
+        default: &#x27;auto&#x27;
 
 jobs:
   auto-absen:
     runs-on: ubuntu-latest
     steps:
-      - name: Execute Auto Absent Script
+      - name: Execute Auto Absent Reguler &amp; Jaga Script
+        env:
+          TARGET_MODE: ${{ github.event.inputs.target_mode || &#x27;auto&#x27; }}
         run: |
-          echo "Menjalankan System Actions Auto-Absen ASN UPT Puskesmas Barugaia..."
-                </pre>
+          node -e &#x27;
+          const DB_URL = &quot;https://e-absenpkmbarugaia-default-rtdb.asia-southeast1.firebasedatabase.app&quot;;
+
+          function cleanNipStr(v) {
+            return String(v || &quot;&quot;).replace(/\D/g, &quot;&quot;);
+          }
+
+          function matchShift(logShift, targetShift) {
+            const s = String(logShift || &quot;&quot;).toUpperCase();
+            const t = String(targetShift || &quot;&quot;).toUpperCase();
+            return s === t || s.includes(t);
+          }
+
+          async function pushLog(logPayload) {
+            await fetch(`${DB_URL}/attendance_logs/${logPayload.id}.json`, {
+              method: &quot;PUT&quot;,
+              headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+              body: JSON.stringify(logPayload)
+            });
+          }
+
+          async function run() {
+            const now = new Date();
+            const witaStr = now.toLocaleString(&quot;en-CA&quot;, { timeZone: &quot;Asia/Makassar&quot;, hour12: false });
+            const [todayStr, timePart] = witaStr.split(&quot;, &quot;);
+            const witaDate = new Date(now.toLocaleString(&quot;en-US&quot;, { timeZone: &quot;Asia/Makassar&quot; }));
+            const witaHour = witaDate.getHours();
+
+            // Tentukan mode tugas berdasarkan jadwal cron atau input manual
+            let mode = (process.env.TARGET_MODE || &quot;auto&quot;).toLowerCase();
+            if (mode === &quot;auto&quot;) {
+              if (witaHour === 14) mode = &quot;shift1&quot;;
+              else if (witaHour === 15) mode = &quot;reguler&quot;;
+              else if (witaHour &gt;= 20) mode = &quot;shift2&quot;;
+              else mode = &quot;all&quot;;
+            }
+
+            // Ambil data master pegawai, log hari ini, hari libur, dan jadwal jaga
+            const [empRes, logRes, holRes, schedRes] = await Promise.all([
+              fetch(`${DB_URL}/employees.json`),
+              fetch(`${DB_URL}/attendance_logs.json`),
+              fetch(`${DB_URL}/holidays.json`),
+              fetch(`${DB_URL}/jaga_schedules/${todayStr}.json`)
+            ]);
+
+            const empData = await empRes.json();
+            const logData = await logRes.json();
+            const holData = await holRes.json();
+            const todaySchedule = (await schedRes.json()) || {};
+
+            const employees = empData ? Object.values(empData) : [];
+            const empMap = new Map(employees.map(e =&gt; [cleanNipStr(e.nip), e]));
+            const allLogs = logData ? Object.values(logData) : [];
+            const todayLogs = allLogs.filter(l =&gt; l &amp;&amp; String(l.date || &quot;&quot;).trim() === todayStr);
+            const holidays = holData ? Object.values(holData) : [];
+
+            let addedReguler = 0;
+            let addedDatangJaga = 0;
+            let addedLepasJaga = 0;
+            let seq = 0;
+            const baseTs = Date.now();
+
+            // =========================================================
+            // A. PROSES AUTO-ALPA ABSEN REGULER (Senin - Sabtu Non-Libur)
+            // =========================================================
+            if (mode === &quot;reguler&quot; || mode === &quot;all&quot;) {
+              const isSunday = witaDate.getDay() === 0;
+              const foundHoliday = holidays.find(h =&gt; h &amp;&amp; h.date === todayStr);
+
+              if (!isSunday &amp;&amp; !foundHoliday) {
+                const presentNips = new Set(
+                  todayLogs.map(l =&gt; cleanNipStr(l.nip))
+                );
+
+                for (const emp of employees) {
+                  const cleanNip = cleanNipStr(emp.nip);
+                  if (!cleanNip || presentNips.has(cleanNip)) continue;
+
+                  const logId = baseTs + (seq++);
+                  await pushLog({
+                    id: logId,
+                    category: &quot;REGULER&quot;,
+                    shift: &quot;-&quot;,
+                    date: todayStr,
+                    time: &quot;15:00:00 WITA&quot;,
+                    nip: cleanNip,
+                    nip_display: emp.nip_display || cleanNip,
+                    nama: emp.nama,
+                    jabatan: emp.jabatan || &quot;-&quot;,
+                    unit: emp.unit || &quot;-&quot;,
+                    type: &quot;ALPA&quot;,
+                    status: &quot;TIDAK HADIR (ALPA)&quot;,
+                    isBypass: true,
+                    method: &quot;GitHub Actions Cron Job&quot;
+                  });
+                  addedReguler++;
+                }
+              } else {
+                console.log(&quot;Reguler dilewati karena hari Minggu / Libur Nasional.&quot;);
+              }
+            }
+
+            // =========================================================
+            // B. PROSES AUTO-ALPA DATANG JAGA &amp; LEPAS JAGA (Setiap Hari)
+            // =========================================================
+            const shiftsToProcess = [];
+            if (mode === &quot;shift1&quot; || mode === &quot;all&quot;) shiftsToProcess.push({ name: &quot;Shift 1&quot;, cutoffTime: &quot;14:15:00 WITA&quot; });
+            if (mode === &quot;shift2&quot; || mode === &quot;all&quot;) shiftsToProcess.push({ name: &quot;Shift 2&quot;, cutoffTime: &quot;20:15:00 WITA&quot; });
+
+            for (const shiftObj of shiftsToProcess) {
+              const shiftName = shiftObj.name;
+              const jagaLogsThisShift = todayLogs.filter(
+                l =&gt; String(l.category || &quot;&quot;).toUpperCase() === &quot;JAGA&quot; &amp;&amp; matchShift(l.shift, shiftName)
+              );
+
+              // 1. Cek Petugas Terjadwal yang Tidak Datang Jaga
+              const scheduledRaw = todaySchedule[shiftName] || [];
+              const scheduledNips = Array.isArray(scheduledRaw)
+                ? scheduledRaw.map(cleanNipStr).filter(Boolean)
+                : Object.keys(scheduledRaw).filter(k =&gt; scheduledRaw[k]).map(cleanNipStr);
+
+              for (const schedNip of scheduledNips) {
+                const hasAnyShiftLog = jagaLogsThisShift.some(l =&gt; cleanNipStr(l.nip) === schedNip);
+                if (hasAnyShiftLog) continue;
+
+                const emp = empMap.get(schedNip);
+                if (!emp) continue;
+
+                const logId = baseTs + (seq++);
+                await pushLog({
+                  id: logId,
+                  category: &quot;JAGA&quot;,
+                  shift: shiftName,
+                  date: todayStr,
+                  time: shiftObj.cutoffTime,
+                  nip: schedNip,
+                  nip_display: emp.nip_display || schedNip,
+                  nama: emp.nama,
+                  jabatan: emp.jabatan || &quot;-&quot;,
+                  unit: emp.unit || &quot;-&quot;,
+                  type: &quot;ALPA&quot;,
+                  status: `TIDAK HADIR JAGA (${shiftName.toUpperCase()})`,
+                  isBypass: true,
+                  method: &quot;GitHub Actions Cron Job&quot;
+                });
+                addedDatangJaga++;
+              }
+
+              // 2. Cek Petugas yang Sudah Datang Jaga tapi Belum Lepas Jaga
+              const datangLogs = jagaLogsThisShift.filter(
+                l =&gt; String(l.type || &quot;&quot;).toUpperCase() === &quot;DATANG JAGA&quot;
+              );
+
+              for (const dLog of datangLogs) {
+                const dNip = cleanNipStr(dLog.nip);
+                const alreadyClosed = jagaLogsThisShift.some(l =&gt; {
+                  if (cleanNipStr(l.nip) !== dNip) return false;
+                  const t = String(l.type || &quot;&quot;).toUpperCase();
+                  return t === &quot;LEPAS JAGA&quot; || t === &quot;ALPA LEPAS JAGA&quot;;
+                });
+
+                if (alreadyClosed) continue;
+
+                const logId = baseTs + (seq++);
+                await pushLog({
+                  id: logId,
+                  category: &quot;JAGA&quot;,
+                  shift: shiftName,
+                  date: todayStr,
+                  time: shiftObj.cutoffTime,
+                  nip: dNip,
+                  nip_display: dLog.nip_display || dNip,
+                  nama: dLog.nama,
+                  jabatan: dLog.jabatan || &quot;-&quot;,
+                  unit: dLog.unit || &quot;-&quot;,
+                  type: &quot;ALPA LEPAS JAGA&quot;,
+                  status: `ALPA LEPAS JAGA (${shiftName.toUpperCase()})`,
+                  isBypass: true,
+                  method: &quot;GitHub Actions Cron Job&quot;
+                });
+                addedLepasJaga++;
+              }
+            }
+
+            // Perbarui Status Med-Sync di Header Aplikasi
+            await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
+              method: &quot;PUT&quot;,
+              headers: { &quot;Content-Type&quot;: &quot;application/json&quot; },
+              body: JSON.stringify({
+                status: &quot;SUCCESS&quot;,
+                mode: mode,
+                date: todayStr,
+                time: `${timePart} WITA`,
+                total_alpa_added: addedReguler + addedDatangJaga + addedLepasJaga,
+                detail: { reguler: addedReguler, datang_jaga: addedDatangJaga, lepas_jaga: addedLepasJaga }
+              })
+            });
+
+            console.log(`Selesai [${mode}] (${todayStr}): Reguler=${addedReguler}, DatangJaga=${addedDatangJaga}, LepasJaga=${addedLepasJaga}`);
+          }
+
+          run().catch(err =&gt; { console.error(err); process.exit(1); });
+          &#x27;</pre>
             </div>
-            <div class="text-[11px] text-slate-400 bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2">
-                <span><i class="fa-solid fa-terminal text-teal-400 mr-1"></i> Catatan: Isi <code>databaseURL</code> di script index.html untuk mengaktifkan sync cloud.</span>
-                <button onclick="closeModalCloudFunctionCode()" class="w-full sm:w-auto px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold">Tutup</button>
+            <div class="text-[11px] text-slate-300 bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <span><i class="fa-solid fa-terminal text-teal-400 mr-1"></i> Simpan skrip di atas ke repositori GitHub pada jalur <code>.github/workflows/auto-alpa.yml</code> agar berjalan otomatis tanpa membuka aplikasi.</span>
+                <button onclick="closeModalCloudFunctionCode()" class="w-full sm:w-auto shrink-0 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KELOLA JADWAL JAGA (UNTUK AUTO-ALPA DATANG JAGA) -->
+    <div id="modal-jaga-schedule" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md hidden p-4">
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl max-w-4xl w-full border border-purple-500/35 relative shadow-2xl max-h-[92vh] flex flex-col">
+            <button onclick="closeModalJagaSchedule()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="font-orbitron font-bold text-base sm:text-lg text-white mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-check text-purple-400"></i> Kelola Jadwal Dinas Jaga ASN
+            </h3>
+            <p class="text-xs text-cyan-100/75 mb-4">Tentukan petugas yang mendapat giliran piket per tanggal &amp; shift. Petugas terjadwal yang tidak melakukan <strong>Datang Jaga</strong> akan otomatis dicatat <strong>ALPA</strong> oleh Cron Job setelah shift berakhir.</p>
+
+            <!-- Filter Tanggal & Shift -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3 bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                <div>
+                    <label class="block text-[11px] font-semibold text-purple-300 mb-1">Tanggal Jadwal Jaga</label>
+                    <input type="date" id="jaga-schedule-date" onchange="loadJagaScheduleSelection()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:border-purple-400 outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-purple-300 mb-1">Pilih Shift Jaga</label>
+                    <select id="jaga-schedule-shift" onchange="loadJagaScheduleSelection()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:border-purple-400 outline-none">
+                        <option value="Shift 1">Shift 1 (08.00 - 14.00 WITA)</option>
+                        <option value="Shift 2">Shift 2 (14.00 - 20.00 WITA)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-purple-300 mb-1">Cari Pegawai / Unit</label>
+                    <input type="text" id="jaga-schedule-search" oninput="renderJagaEmployeeChecklist()" placeholder="Ketik nama, NIP, atau unit..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:border-purple-400 outline-none">
+                </div>
+            </div>
+
+            <!-- Baris Aksi Cepat -->
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+                <span class="text-slate-300">Terpilih untuk shift ini: <strong id="jaga-selected-count" class="text-purple-400">0</strong> pegawai</span>
+                <div class="flex gap-2">
+                    <button type="button" onclick="toggleSelectAllJagaEmployees(true)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-lg text-[11px] font-semibold">Centang Semua (Filter)</button>
+                    <button type="button" onclick="toggleSelectAllJagaEmployees(false)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-rose-300 rounded-lg text-[11px] font-semibold">Kosongkan Pilihan</button>
+                </div>
+            </div>
+
+            <!-- Daftar Centang Pegawai -->
+            <div id="jaga-employee-checklist" class="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto pr-1 flex-grow min-h-[200px] max-h-[320px] mb-3"></div>
+
+            <!-- Ringkasan Jadwal Tersimpan pada Tanggal Dipilih -->
+            <div id="jaga-schedule-summary" class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 mb-3 text-[11px] text-slate-300"></div>
+
+            <!-- Tombol Simpan -->
+            <div class="flex flex-col sm:flex-row justify-end gap-2">
+                <button type="button" onclick="closeModalJagaSchedule()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl">Tutup</button>
+                <button type="button" onclick="saveJagaSchedule()" class="glow-btn px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Simpan Jadwal Jaga
+                </button>
             </div>
         </div>
     </div>
@@ -2364,6 +2631,8 @@ jobs:
         let employees = [];
         let attendanceLogs = [];
         let customHolidays = [];
+        let jagaSchedules = {};
+        let tempSelectedJagaNips = new Set();
         let adminPassword = "123456";
         let isBypassActive = false;
         let isAntiFakeGpsActive = true;
@@ -2629,6 +2898,15 @@ jobs:
                 localStorage.setItem('pkm_barugaia_holidays', JSON.stringify(customHolidays));
                 renderHolidaysTable();
                 checkHolidayStatusUI();
+            });
+
+            db.ref('jaga_schedules').on('value', (snapshot) => {
+                jagaSchedules = snapshot.val() || {};
+                localStorage.setItem('pkm_barugaia_jaga_schedules', JSON.stringify(jagaSchedules));
+                const jagaModal = document.getElementById('modal-jaga-schedule');
+                if (jagaModal && !jagaModal.classList.contains('hidden')) {
+                    renderActiveJagaScheduleSummary();
+                }
             });
 
             db.ref('settings/isBypassActive').on('value', (snapshot) => {
@@ -3915,16 +4193,170 @@ jobs:
         function openModalCloudFunctionCode() { document.getElementById('modal-cloud-function').classList.remove('hidden'); }
         function closeModalCloudFunctionCode() { document.getElementById('modal-cloud-function').classList.add('hidden'); }
 
-        function copyCloudFunctionCode() {
-            const codeText = document.getElementById('cloud-function-code-snippet').innerText;
-            navigator.clipboard.writeText(codeText).then(() => {
-                showToast("Kode workflow disalin!", "success");
-            }).catch(() => {
-                document.execCommand('copy');
-                showToast("Kode disalin ke clipboard!", "success");
-            });
+        function openModalJagaSchedule() {
+            const dateInput = document.getElementById('jaga-schedule-date');
+            if (!dateInput.value) {
+                dateInput.value = getLocalDateStr(new Date());
+            }
+            document.getElementById('jaga-schedule-search').value = '';
+            loadJagaScheduleSelection();
+            document.getElementById('modal-jaga-schedule').classList.remove('hidden');
         }
 
+        function closeModalJagaSchedule() {
+            document.getElementById('modal-jaga-schedule').classList.add('hidden');
+        }
+
+        function loadJagaScheduleSelection() {
+            const dateStr = document.getElementById('jaga-schedule-date').value;
+            const shiftStr = document.getElementById('jaga-schedule-shift').value;
+            const rawList = (jagaSchedules[dateStr] && jagaSchedules[dateStr][shiftStr]) || [];
+            const nipArray = Array.isArray(rawList)
+                ? rawList
+                : Object.keys(rawList).filter(k => rawList[k]);
+
+            tempSelectedJagaNips = new Set(nipArray.map(n => normalizeNip(n)));
+            renderJagaEmployeeChecklist();
+            renderActiveJagaScheduleSummary();
+        }
+
+        function renderJagaEmployeeChecklist() {
+            const container = document.getElementById('jaga-employee-checklist');
+            const keyword = (document.getElementById('jaga-schedule-search').value || '').toLowerCase().trim();
+
+            const filtered = employees.filter(emp => {
+                if (!keyword) return true;
+                return String(emp.nama || '').toLowerCase().includes(keyword) ||
+                       String(emp.nip || '').includes(keyword) ||
+                       String(emp.unit || '').toLowerCase().includes(keyword);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center text-xs text-slate-400 py-6">Tidak ada pegawai yang cocok dengan pencarian.</div>`;
+            } else {
+                container.innerHTML = filtered.map(emp => {
+                    const cleanNip = normalizeNip(emp.nip);
+                    const isChecked = tempSelectedJagaNips.has(cleanNip);
+                    return `
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${isChecked ? 'bg-purple-950/50 border-purple-500/60' : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'}">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleSingleJagaEmployee('${cleanNip}', this.checked)" class="w-4 h-4 accent-purple-500 rounded cursor-pointer">
+                            <div class="min-w-0 flex-1">
+                                <div class="text-xs font-semibold text-white truncate">${emp.nama}</div>
+                                <div class="text-[10px] text-slate-400 truncate">${emp.unit || '-'} • ${emp.nip_display || cleanNip}</div>
+                            </div>
+                        </label>
+                    `;
+                }).join('');
+            }
+            document.getElementById('jaga-selected-count').innerText = tempSelectedJagaNips.size;
+        }
+
+        function toggleSingleJagaEmployee(cleanNip, isChecked) {
+            if (isChecked) tempSelectedJagaNips.add(cleanNip);
+            else tempSelectedJagaNips.delete(cleanNip);
+            renderJagaEmployeeChecklist();
+        }
+
+        function toggleSelectAllJagaEmployees(selectAll) {
+            const keyword = (document.getElementById('jaga-schedule-search').value || '').toLowerCase().trim();
+            employees.forEach(emp => {
+                const match = !keyword ||
+                    String(emp.nama || '').toLowerCase().includes(keyword) ||
+                    String(emp.nip || '').includes(keyword) ||
+                    String(emp.unit || '').toLowerCase().includes(keyword);
+                if (match) {
+                    const cleanNip = normalizeNip(emp.nip);
+                    if (selectAll) tempSelectedJagaNips.add(cleanNip);
+                    else tempSelectedJagaNips.delete(cleanNip);
+                }
+            });
+            renderJagaEmployeeChecklist();
+        }
+
+        function saveJagaSchedule() {
+            const dateStr = document.getElementById('jaga-schedule-date').value;
+            const shiftStr = document.getElementById('jaga-schedule-shift').value;
+            if (!dateStr) {
+                showToast("Pilih tanggal jadwal jaga terlebih dahulu!", "error");
+                return;
+            }
+
+            const selectedArray = Array.from(tempSelectedJagaNips);
+            if (!jagaSchedules[dateStr]) jagaSchedules[dateStr] = {};
+            jagaSchedules[dateStr][shiftStr] = selectedArray;
+
+            localStorage.setItem('pkm_barugaia_jaga_schedules', JSON.stringify(jagaSchedules));
+            if (isCloudAvailable && db) {
+                db.ref(`jaga_schedules/${dateStr}/${shiftStr}`).set(selectedArray);
+            }
+
+            renderActiveJagaScheduleSummary();
+            showToast(`Jadwal ${shiftStr} (${dateStr}) berhasil disimpan (${selectedArray.length} petugas).`, "success");
+        }
+
+        function deleteJagaScheduleShift(dateStr, shiftStr) {
+            if (!confirm(`Hapus seluruh jadwal petugas untuk ${shiftStr} tanggal ${dateStr}?`)) return;
+            if (jagaSchedules[dateStr]) {
+                delete jagaSchedules[dateStr][shiftStr];
+                if (Object.keys(jagaSchedules[dateStr]).length === 0) delete jagaSchedules[dateStr];
+            }
+            localStorage.setItem('pkm_barugaia_jaga_schedules', JSON.stringify(jagaSchedules));
+            if (isCloudAvailable && db) {
+                db.ref(`jaga_schedules/${dateStr}/${shiftStr}`).remove();
+            }
+            loadJagaScheduleSelection();
+            showToast(`Jadwal ${shiftStr} tanggal ${dateStr} dihapus.`, "success");
+        }
+
+        function renderActiveJagaScheduleSummary() {
+            const dateStr = document.getElementById('jaga-schedule-date').value;
+            const box = document.getElementById('jaga-schedule-summary');
+            const daySched = jagaSchedules[dateStr] || {};
+
+            const renderShiftLine = (shiftLabel) => {
+                const raw = daySched[shiftLabel] || [];
+                const nips = Array.isArray(raw) ? raw : Object.keys(raw).filter(k => raw[k]);
+                if (nips.length === 0) return `<div class="text-slate-500">• <strong>${shiftLabel}:</strong> Belum ada petugas dijadwalkan</div>`;
+                const names = nips.map(n => {
+                    const emp = findEmployeeByNip(n);
+                    return emp ? emp.nama : n;
+                }).join(', ');
+                return `
+                    <div class="flex items-start justify-between gap-2 py-1 border-b border-slate-800/80 last:border-none">
+                        <div><strong class="text-purple-300">${shiftLabel} (${nips.length} org):</strong> <span class="text-slate-200">${names}</span></div>
+                        <button type="button" onclick="deleteJagaScheduleShift('${dateStr}', '${shiftLabel}')" class="text-rose-400 hover:text-rose-300 shrink-0 text-[10px] underline">Hapus</button>
+                    </div>
+                `;
+            };
+
+            box.innerHTML = `
+                <div class="font-bold text-cyan-300 mb-1">Ringkasan Petugas Terjadwal (${dateStr}):</div>
+                ${renderShiftLine('Shift 1')}
+                ${renderShiftLine('Shift 2')}
+            `;
+        }
+
+        function copyCloudFunctionCode() {
+            const codeText = document.getElementById('cloud-function-code-snippet').innerText;
+            const fallbackCopy = () => {
+                const ta = document.createElement('textarea');
+                ta.value = codeText;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast("Kode workflow disalin ke clipboard!", "success");
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(codeText).then(() => {
+                    showToast("Kode workflow disalin!", "success");
+                }).catch(fallbackCopy);
+            } else {
+                fallbackCopy();
+            }
+        }
         function handleAddHoliday(e) {
             e.preventDefault();
             const d = document.getElementById('add-holiday-date').value;
@@ -4823,6 +5255,11 @@ Total Unik Hadir: ${m.hadir} dari ${m.total} ASN (${m.pct}%)` : '';
             const savedHolidays = localStorage.getItem('pkm_barugaia_holidays');
             if (savedHolidays) customHolidays = JSON.parse(savedHolidays);
 
+            const savedJagaSchedules = localStorage.getItem('pkm_barugaia_jaga_schedules');
+            if (savedJagaSchedules) {
+                try { jagaSchedules = JSON.parse(savedJagaSchedules) || {}; } catch (e) { jagaSchedules = {}; }
+            }
+
             const savedPass = localStorage.getItem('pkm_barugaia_admin_pass');
             if (savedPass) adminPassword = savedPass;
 
@@ -5314,25 +5751,25 @@ Total Unik Hadir: ${m.hadir} dari ${m.total} ASN (${m.pct}%)` : '';
                 feedBadge.innerText = `Hari Ini (${todayStr})`;
             }
 
-            const presentNipsToday = new Set(
-                attendanceLogs
-                    .filter(l => String(l.date || '').trim() === todayStr && (
-                        l.type === 'DATANG' ||
-                        l.type === 'PULANG' ||
-                        l.type === 'DATANG JAGA' ||
-                        l.type === 'LEPAS JAGA' ||
-                        (l.status && (
-                            l.status.includes('Tepat') ||
-                            l.status.includes('Luar Jam') ||
-                            l.status.includes('Terlambat') ||
-                            l.status.includes('IZIN') ||
-                            l.status.includes('SAKIT') ||
-                            l.status.includes('DINAS') ||
-                            l.status.includes('CUTI')
-                        ))
-                    ))
-                    .map(l => normalizeNip(l.nip))
-            );
+            const presentRegulerNips = new Set();
+            const presentJagaShiftKeys = new Set();
+
+            attendanceLogs.forEach(l => {
+                if (String(l.date || '').trim() !== todayStr) return;
+                const cleanNip = normalizeNip(l.nip);
+                const cat = getLogCategory(l);
+                const st = String(l.status || '');
+                const isHadirOrIzin =
+                    l.type === 'DATANG' || l.type === 'PULANG' ||
+                    l.type === 'DATANG JAGA' || l.type === 'LEPAS JAGA' ||
+                    st.includes('Tepat') || st.includes('Luar Jam') || st.includes('Terlambat') ||
+                    st.includes('IZIN') || st.includes('SAKIT') || st.includes('DINAS') || st.includes('CUTI');
+
+                if (isHadirOrIzin) {
+                    if (cat === 'JAGA') presentJagaShiftKeys.add(`${cleanNip}_${l.shift || ''}`);
+                    else presentRegulerNips.add(cleanNip);
+                }
+            });
 
             const seenFeedKeys = new Set();
             const todayLogs = attendanceLogs.filter(l => {
@@ -5342,11 +5779,15 @@ Total Unik Hadir: ${m.hadir} dari ${m.total} ASN (${m.pct}%)` : '';
                 const cat = getLogCategory(l);
                 const rawType = String(l.type || '').toUpperCase();
                 const rawStatus = String(l.status || '').toUpperCase();
-                const isAlpaEntry = rawType.includes('ALPA') || rawType === 'TANPA KETERANGAN' || rawStatus.includes('ALPA') || rawStatus.includes('TIDAK HADIR');
+                const isAlpaLepasJaga = rawType === 'ALPA LEPAS JAGA' || rawStatus.includes('ALPA LEPAS JAGA');
+                const isAlpaMasuk = !isAlpaLepasJaga && (rawType.includes('ALPA') || rawType === 'TANPA KETERANGAN' || rawStatus.includes('TIDAK HADIR'));
 
-                if (isAlpaEntry && presentNipsToday.has(cleanNip)) return false;
+                if (isAlpaMasuk) {
+                    if (cat === 'JAGA' && presentJagaShiftKeys.has(`${cleanNip}_${l.shift || ''}`)) return false;
+                    if (cat === 'REGULER' && presentRegulerNips.has(cleanNip)) return false;
+                }
 
-                const normalizedType = isAlpaEntry ? 'ALPA' : rawType;
+                const normalizedType = isAlpaLepasJaga ? 'ALPA_LEPAS_JAGA' : (isAlpaMasuk ? 'ALPA' : rawType);
                 const dedupKey = `${cat}_${cleanNip}_${normalizedType}_${l.shift || ''}`;
                 if (seenFeedKeys.has(dedupKey)) return false;
                 seenFeedKeys.add(dedupKey);
@@ -6344,6 +6785,7 @@ Total Unik Hadir: ${m.hadir} dari ${m.total} ASN (${m.pct}%)` : '';
             if (confirm("PERINGATAN! Ini akan menghapus seluruh log presensi & hari libur, namun MEMPERTAHANKAN 39 master pegawai ASN. Lanjutkan?")) {
                 attendanceLogs = [];
                 customHolidays = [];
+                jagaSchedules = {};
                 isBypassActive = false;
                 adminPassword = "123456";
 
@@ -6352,12 +6794,14 @@ Total Unik Hadir: ${m.hadir} dari ${m.total} ASN (${m.pct}%)` : '';
                         employees: employees,
                         attendance_logs: {},
                         holidays: {},
+                        jaga_schedules: {},
                         settings: { isBypassActive: false }
                     });
                 }
                 saveEmployeesToLocalStorage();
                 saveLogsToLocalStorage();
                 localStorage.setItem('pkm_barugaia_holidays', JSON.stringify(customHolidays));
+                localStorage.setItem('pkm_barugaia_jaga_schedules', JSON.stringify(jagaSchedules));
                 localStorage.setItem('pkm_barugaia_bypass_active', JSON.stringify(isBypassActive));
                 localStorage.setItem('pkm_barugaia_admin_pass', adminPassword);
 
@@ -6656,14 +7100,21 @@ Total Unik Hadir: ${m.hadir} dari ${m.total} ASN (${m.pct}%)` : '';
 
                 if (log.type === 'DATANG' || log.type === 'DATANG JAGA') {
                     groupedMap[key].jamDatang = log.time;
-                    if (log.status && log.status.includes("Terlambat")) groupedMap[key].statusAkhir = "TERLAMBAT";
-                    else if (log.status && log.status.includes("DINAS")) groupedMap[key].statusAkhir = "DINAS LUAR (DL)";
-                    else if (log.status && log.status.includes("CUTI")) groupedMap[key].statusAkhir = "CUTI (C)";
-                    else if (log.status && log.status.includes("IZIN")) groupedMap[key].statusAkhir = "IZIN (I)";
-                    else if (log.status && log.status.includes("SAKIT")) groupedMap[key].statusAkhir = "SAKIT (S)";
-                    else if (log.status && (log.status.includes("ALPA") || log.status.includes("TIDAK HADIR"))) groupedMap[key].statusAkhir = "ALPA (A)";
+                    if (groupedMap[key].statusAkhir !== "ALPA LEPAS JAGA") {
+                        if (log.status && log.status.includes("Terlambat")) groupedMap[key].statusAkhir = "TERLAMBAT";
+                        else if (log.status && log.status.includes("DINAS")) groupedMap[key].statusAkhir = "DINAS LUAR (DL)";
+                        else if (log.status && log.status.includes("CUTI")) groupedMap[key].statusAkhir = "CUTI (C)";
+                        else if (log.status && log.status.includes("IZIN")) groupedMap[key].statusAkhir = "IZIN (I)";
+                        else if (log.status && log.status.includes("SAKIT")) groupedMap[key].statusAkhir = "SAKIT (S)";
+                        else if (log.status && (log.status.includes("ALPA") || log.status.includes("TIDAK HADIR"))) groupedMap[key].statusAkhir = "ALPA (A)";
+                    }
                 } else if (log.type === 'PULANG' || log.type === 'LEPAS JAGA') {
                     groupedMap[key].jamPulang = log.time;
+                    if (groupedMap[key].statusAkhir === "ALPA LEPAS JAGA") {
+                        groupedMap[key].statusAkhir = "HADIR";
+                    }
+                } else if (log.type === 'ALPA LEPAS JAGA' || (log.status && log.status.includes("ALPA LEPAS JAGA"))) {
+                    groupedMap[key].statusAkhir = "ALPA LEPAS JAGA";
                 } else if (log.type === 'ALPA' || log.type === 'TANPA KETERANGAN') {
                     groupedMap[key].statusAkhir = "ALPA (A)";
                 }
