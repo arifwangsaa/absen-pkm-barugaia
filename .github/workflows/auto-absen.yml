@@ -2,26 +2,115 @@ name: Auto-Absen Alpa ASN PKM Barugaia
 
 on:
   schedule:
-    - cron: '0 7 * * 1-6'
+    - cron: '0 7 * * 1-6' # Pukul 15:00 WITA (07:00 UTC) Senin - Sabtu
   workflow_dispatch:
 
 jobs:
   auto-absen:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Execute Auto Absent Script
+        run: |
+          node -e '
+          const DB_URL = "https://e-absenpkmbarugaia-default-rtdb.asia-southeast1.firebasedatabase.app";
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+          async function run() {
+            const now = new Date();
+            const witaStr = now.toLocaleString("en-CA", { timeZone: "Asia/Makassar", hour12: false });
+            const [todayStr, timePart] = witaStr.split(", ");
+            const witaDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Makassar" }));
 
-      - name: Install Firebase Admin SDK
-        run: npm install --no-save firebase-admin
+            // 1. Cek Hari Minggu
+            if (witaDate.getDay() === 0) {
+              await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "SKIPPED_HOLIDAY", date: todayStr, reason: "Hari Minggu" })
+              });
+              console.log("Dilewati: Hari Minggu");
+              return;
+            }
 
-      - name: Jalankan Skrip Auto-Absen & Rekap Alpa
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          FIREBASE_DATABASE_URL: "https://e-absenpkmbarugaia-default-rtdb.asia-southeast1.firebasedatabase.app/"
-        run: node scripts/auto-absen.js
+            // 2. Cek Hari Libur Nasional / Cuti Bersama di Firebase
+            const holRes = await fetch(`${DB_URL}/holidays.json`);
+            const holData = await holRes.json();
+            const holidays = holData ? Object.values(holData) : [];
+            const foundHoliday = holidays.find(h => h && h.date === todayStr);
+            if (foundHoliday) {
+              await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "SKIPPED_HOLIDAY", date: todayStr, reason: foundHoliday.desc || "Hari Libur" })
+              });
+              console.log("Dilewati: Hari Libur -", foundHoliday.desc);
+              return;
+            }
+
+            // 3. Ambil Data Master Pegawai & Log Presensi Hari Ini
+            const [empRes, logRes] = await Promise.all([
+              fetch(`${DB_URL}/employees.json`),
+              fetch(`${DB_URL}/attendance_logs.json`)
+            ]);
+            const empData = await empRes.json();
+            const logData = await logRes.json();
+
+            const employees = empData ? Object.values(empData) : [];
+            const allLogs = logData ? Object.values(logData) : [];
+
+            const presentNips = new Set(
+              allLogs
+                .filter(l => l && String(l.date || "").trim() === todayStr)
+                .map(l => String(l.nip || "").replace(/\D/g, ""))
+            );
+
+            // 4. Isi ALPA untuk Pegawai yang Belum Ada Log Sama Sekali Hari Ini
+            let addedCount = 0;
+            const baseTs = Date.now();
+
+            for (const emp of employees) {
+              const cleanNip = String(emp.nip || "").replace(/\D/g, "");
+              if (!cleanNip || presentNips.has(cleanNip)) continue;
+
+              const logId = baseTs + addedCount;
+              const alpaPayload = {
+                id: logId,
+                category: "REGULER",
+                shift: "-",
+                date: todayStr,
+                time: "15:00:00 WITA",
+                nip: cleanNip,
+                nip_display: emp.nip_display || cleanNip,
+                nama: emp.nama,
+                jabatan: emp.jabatan || "-",
+                unit: emp.unit || "-",
+                type: "ALPA",
+                status: "TIDAK HADIR (ALPA)",
+                isBypass: true,
+                method: "GitHub Actions Cron Job"
+              };
+
+              await fetch(`${DB_URL}/attendance_logs/${logId}.json`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(alpaPayload)
+              });
+              addedCount++;
+            }
+
+            // 5. Perbarui Status Med-Sync di Header Aplikasi
+            await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                status: "SUCCESS",
+                date: todayStr,
+                time: `${timePart} WITA`,
+                total_alpa_added: addedCount
+              })
+            });
+
+            console.log(`Selesai (${todayStr}): ${addedCount} pegawai otomatis dicatat ALPA.`);
+          }
+
+          run().catch(err => { console.error(err); process.exit(1); });
+          '
