@@ -359,40 +359,88 @@
                 <span id="badge-holiday-status" class="hidden px-3 py-1 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/35">
                     <i class="fa-solid fa-calendar-xmark mr-1"></i> HARI LIBUR
                 </span>
+                <span id="badge-antifakegps-status" class="px-3 py-1 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/35">
+                    <i class="fa-solid fa-satellite-dish mr-1"></i> Anti Fake GPS Aktif
+                </span>
                 <span id="badge-bypass-status" class="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/35">
                     <i class="fa-solid fa-hospital mr-1"></i> Area Puskesmas Aktif
                 </span>
             </div>
         </div>
 
-        <!-- SEKSI GRAFIK & DIAGRAM KEHADIRAN TENAGA MEDIS -->
+        <!-- SEKSI GRAFIK & DIAGRAM KEHADIRAN TENAGA MEDIS (OPSI 5 + TAB UNIT LAYANAN) -->
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 mb-6">
-            <div class="md:col-span-5 glass-panel med-card-3d p-4 sm:p-5 rounded-3xl flex flex-col justify-between">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-orbitron font-bold text-xs sm:text-sm text-white flex items-center gap-2">
-                        <i class="fa-solid fa-chart-pie text-teal-400"></i> Persentase Kehadiran ASN
-                    </h3>
-                    <span id="today-percentage-badge" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/35">0% Hadir</span>
+            
+            <!-- PANEL KIRI: NIGHTINGALE POLAR ROSE DIAGRAM -->
+            <div class="md:col-span-5 glass-panel med-card-3d p-4 sm:p-5 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+                <div class="flex flex-wrap justify-between items-start gap-2 mb-2.5">
+                    <div>
+                        <h3 class="font-orbitron font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-fan text-teal-400"></i>
+                            <span id="rose-chart-title">Nightingale Kehadiran</span>
+                        </h3>
+                        <p id="rose-chart-subtitle" class="text-[10px] text-cyan-200/65 mt-0.5">Proporsi kelopak presensi ASN hari ini</p>
+                    </div>
+                    <span id="today-percentage-badge" class="text-[11px] font-bold font-mono px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-400/35">
+                        0% Hadir
+                    </span>
                 </div>
-                <div class="relative w-full h-44 sm:h-48 flex items-center justify-center">
+
+                <!-- Tab Switcher Panel Kiri -->
+                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-950/85 rounded-xl border border-teal-500/25 mb-2.5">
+                    <button type="button" id="btn-rose-tab-status" onclick="switchRoseChartTab('status')" class="py-1.5 px-2 rounded-lg text-[11px] font-bold transition bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow">
+                        <i class="fa-solid fa-chart-pie mr-1"></i> Status ASN
+                    </button>
+                    <button type="button" id="btn-rose-tab-unit" onclick="switchRoseChartTab('unit')" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/70">
+                        <i class="fa-solid fa-hospital-user mr-1"></i> Per Unit Layanan
+                    </button>
+                </div>
+
+                <div class="relative w-full h-48 sm:h-52 flex items-center justify-center">
                     <canvas id="todayPieChart"></canvas>
                 </div>
             </div>
 
-            <div class="md:col-span-7 glass-panel med-card-3d p-4 sm:p-5 rounded-3xl flex flex-col justify-between">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-orbitron font-bold text-xs sm:text-sm text-white flex items-center gap-2">
-                        <i class="fa-solid fa-chart-column text-cyan-400"></i> Tren Kehadiran Tenaga Medis
-                    </h3>
-                    <select id="chart-time-range" onchange="renderAttendanceCharts()" class="bg-slate-900/90 text-xs border border-teal-500/35 rounded-lg px-2.5 py-1 text-white focus:outline-none focus:border-teal-400">
-                        <option value="weekly">Mingguan (7 Hari)</option>
-                        <option value="monthly">Bulanan (Bulan Ini)</option>
-                    </select>
+            <!-- PANEL KANAN: ECG PULSE WAVEFORM MONITOR & DISTRIBUSI UNIT -->
+            <div class="md:col-span-7 glass-panel med-card-3d p-4 sm:p-5 rounded-3xl flex flex-col justify-between relative overflow-hidden">
+                <div class="flex flex-wrap justify-between items-start gap-2 mb-2.5">
+                    <div>
+                        <h3 class="font-orbitron font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                            <i class="fa-solid fa-heart-pulse text-rose-400 animate-pulse"></i>
+                            <span id="ecg-chart-title">ECG Telemetry Tren Kehadiran</span>
+                        </h3>
+                        <p id="ecg-chart-subtitle" class="text-[10px] text-cyan-200/65 mt-0.5">Monitor gelombang kedisiplinan &amp; rasio shift jaga</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <select id="chart-time-range" onchange="renderAttendanceCharts()" class="bg-slate-950/90 text-[11px] font-semibold border border-teal-500/40 rounded-xl px-2.5 py-1.5 text-teal-200 focus:outline-none focus:border-teal-400 cursor-pointer">
+                            <option value="weekly">Mingguan (7 Hari)</option>
+                            <option value="monthly">Bulanan (Bulan Ini)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="relative w-full h-44 sm:h-48">
+
+                <!-- Tab Switcher Panel Kanan -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div class="inline-flex p-1 bg-slate-950/85 rounded-xl border border-cyan-500/25">
+                        <button type="button" id="btn-ecg-tab-waveform" onclick="switchEcgChartTab('waveform')" class="py-1.5 px-3 rounded-lg text-[11px] font-bold transition bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow">
+                            <i class="fa-solid fa-wave-square mr-1"></i> Gelombang ECG
+                        </button>
+                        <button type="button" id="btn-ecg-tab-unit" onclick="switchEcgChartTab('unit')" class="py-1.5 px-3 rounded-lg text-[11px] font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/70">
+                            <i class="fa-solid fa-stethoscope mr-1"></i> Distribusi Unit Layanan
+                        </button>
+                    </div>
+
+                    <span id="ecg-live-bpm-badge" class="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-teal-500/15 text-teal-300 border border-teal-400/30">
+                        SYNC: LIVE • 39 ASN
+                    </span>
+                </div>
+
+                <div class="relative w-full h-48 sm:h-52">
                     <canvas id="trendBarChart"></canvas>
                 </div>
             </div>
+
         </div>
 
         <!-- PORTAL LOGIN PEGAWAI (NIP) & PRESENSI TENAGA MEDIS -->
@@ -523,6 +571,7 @@
                                 <h4 id="active-emp-nama" class="text-sm font-bold text-white truncate">Nama Pegawai</h4>
                                 <p id="active-emp-nip" class="text-[11px] font-mono text-cyan-300">NIP. -</p>
                                 <p id="active-emp-jabatan" class="text-[11px] text-slate-300 truncate">Jabatan • Pangkat</p>
+                                <p id="active-emp-device-badge" class="text-[10px] font-mono text-emerald-300 mt-0.5 flex items-center gap-1"><i class="fa-solid fa-shield-halved"></i> Perangkat Terverifikasi</p>
                             </div>
                         </div>
 
@@ -777,6 +826,7 @@
                                     <th class="px-3 py-3">NIP</th>
                                     <th class="px-3 py-3">Jabatan &amp; Unit</th>
                                     <th class="px-3 py-3">Barcode NIP</th>
+                                    <th class="px-3 py-3 text-center">Status Perangkat</th>
                                     <th class="px-3 py-3 text-center rounded-r-lg">Aksi Pengelolaan</th>
                                 </tr>
                             </thead>
@@ -914,8 +964,26 @@
                 </div>
             </div>
 
-            <!-- Bypass & Reset Controls -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <!-- Bypass, Anti Fake GPS & Reset Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                <div class="glass-panel p-5 rounded-3xl flex flex-col justify-between border border-rose-500/25">
+                    <div>
+                        <h3 class="font-orbitron font-bold text-sm text-white mb-1.5 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-rose-400"></i> Proteksi Anti Fake GPS
+                        </h3>
+                        <p class="text-xs text-cyan-100/75 leading-relaxed">
+                            Memvalidasi telemetri satelit multi-sampel, akurasi GPS, fluktuasi koordinat, serta mendeteksi lompatan lokasi tidak wajar untuk mencegah manipulasi titik koordinat (Mock Location).
+                        </p>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between p-3 bg-slate-950/65 rounded-xl border border-slate-800">
+                        <span class="text-xs font-semibold text-slate-200">Status Anti Fake GPS</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-anti-fake-gps" checked onchange="handleAntiFakeGpsToggle(this.checked)" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                        </label>
+                    </div>
+                </div>
                 <div class="glass-panel p-5 rounded-3xl flex flex-col justify-between">
                     <div>
                         <h3 class="font-orbitron font-bold text-sm text-white mb-1.5 flex items-center gap-2">
@@ -1721,7 +1789,8 @@ jobs:
                 "pendidikan": "S1+Ners (Profesi Perawat)",
                 "ttl": "Ujung Pandang, 19/1/1986",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 2,
@@ -1734,7 +1803,8 @@ jobs:
                 "pendidikan": "S1+Bdn (Profesi Bidan)",
                 "ttl": "Bulu Jaya/05-08-1987",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 3,
@@ -1747,7 +1817,8 @@ jobs:
                 "pendidikan": "SLTA (SLTA)",
                 "ttl": "PAJALAYA 26 -03-1973",
                 "jk": "L",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 4,
@@ -1760,7 +1831,8 @@ jobs:
                 "pendidikan": "DIV+ Profesi (Profesi Bidan)",
                 "ttl": "BENTENG 22-12-1975",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 5,
@@ -1773,7 +1845,8 @@ jobs:
                 "pendidikan": "S1+Ners (Profesi Perawat)",
                 "ttl": "Barugaia, 02/09/1983",
                 "jk": "L",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 6,
@@ -1786,7 +1859,8 @@ jobs:
                 "pendidikan": "D3 (Bidan)",
                 "ttl": "Benteng, 10-04-1992",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 7,
@@ -1799,7 +1873,8 @@ jobs:
                 "pendidikan": "S1 + NERS (Profesi Perawat)",
                 "ttl": "Ujung Pandang, 10 September 1980",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 8,
@@ -1812,7 +1887,8 @@ jobs:
                 "pendidikan": "Ners (Perawat)",
                 "ttl": "Joong, 25-12-1982",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 9,
@@ -1825,7 +1901,8 @@ jobs:
                 "pendidikan": "D3 (Bidan)",
                 "ttl": "Bontosaile Selayar,03 Januari 1991",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 10,
@@ -1838,7 +1915,8 @@ jobs:
                 "pendidikan": "D3 (Keperawatan Gigi)",
                 "ttl": "Ujung Pandang, 03-04-1984",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 11,
@@ -1851,7 +1929,8 @@ jobs:
                 "pendidikan": "S1 (Kesmas)",
                 "ttl": "Benteng,21 -03-1983",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 12,
@@ -1864,7 +1943,8 @@ jobs:
                 "pendidikan": "S1 (Kesmas)",
                 "ttl": "Benteng, 01-07-1983",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 13,
@@ -1877,7 +1957,8 @@ jobs:
                 "pendidikan": "S2 (Magister Kesehatan Masyarakat/AKK)",
                 "ttl": "Batangmata,15 Desember 1979",
                 "jk": "L",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 14,
@@ -1890,7 +1971,8 @@ jobs:
                 "pendidikan": "D3 Perawat (Perawat)",
                 "ttl": "selayar 30 Mei 1980",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 15,
@@ -1903,7 +1985,8 @@ jobs:
                 "pendidikan": "s1+Ners (Profesi Perawat)",
                 "ttl": "BARUGAIA, 02-03-1982",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 16,
@@ -1916,7 +1999,8 @@ jobs:
                 "pendidikan": "S1 (Kesmas)",
                 "ttl": "Ujung pandang, 13 - 12 - 1978",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 17,
@@ -1929,7 +2013,8 @@ jobs:
                 "pendidikan": "S1+Ners (Profesi Perawat)",
                 "ttl": "Buntu Barana, 27 Agustus 1972",
                 "jk": "L",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 18,
@@ -1942,7 +2027,8 @@ jobs:
                 "pendidikan": "S1 (Perawat)",
                 "ttl": "Benteng,16 September 1989",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 19,
@@ -1955,7 +2041,8 @@ jobs:
                 "pendidikan": "D3 (Perawat)",
                 "ttl": "Lembang Bau, 12 Juni 1983",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 20,
@@ -1968,7 +2055,8 @@ jobs:
                 "pendidikan": "S1 (Perawat)",
                 "ttl": "manokwari, 17 januari 1988",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 21,
@@ -1981,7 +2069,8 @@ jobs:
                 "pendidikan": "S1 (Bidan)",
                 "ttl": "Ujung Pandang, 8/4/1988",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 22,
@@ -1994,7 +2083,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Apoteker)",
                 "ttl": "Benteng Selayar, 25-01-1987",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 23,
@@ -2007,7 +2097,8 @@ jobs:
                 "pendidikan": "S1 (Kesmas)",
                 "ttl": "Batungannik. 1-10-1998",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 24,
@@ -2020,7 +2111,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Perawat)",
                 "ttl": "Tanabau, 1-08-1989",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 25,
@@ -2033,7 +2125,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Apoteker)",
                 "ttl": "Pangkajene, 13-12-1993",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 26,
@@ -2046,7 +2139,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Perawat)",
                 "ttl": "Lembang Matene, 10-04-1995",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 27,
@@ -2059,7 +2153,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Perawat)",
                 "ttl": "Selayar, 05-02-1988",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 28,
@@ -2072,7 +2167,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Perawat)",
                 "ttl": "Malang, 20 September 1990",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 29,
@@ -2085,7 +2181,8 @@ jobs:
                 "pendidikan": "D4 Terapi Gigi (Terapis Gigi dan Mulut)",
                 "ttl": "Ujung Pandang, 15 Januari 1987",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 30,
@@ -2098,7 +2195,8 @@ jobs:
                 "pendidikan": "DIV + Profesi (Bidan Profesi)",
                 "ttl": "10-10-1976",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 31,
@@ -2111,7 +2209,8 @@ jobs:
                 "pendidikan": "Profesi Dokter (Dokter)",
                 "ttl": "Wamena, 10 Juli 1994",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 32,
@@ -2124,7 +2223,8 @@ jobs:
                 "pendidikan": "D3 Perawat (Perawat)",
                 "ttl": "Benteng Selayar, 17 Maret 1989",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 33,
@@ -2137,7 +2237,8 @@ jobs:
                 "pendidikan": "S1+Ners (Perawat)",
                 "ttl": "Batubullung Selayar,14 Mei 1976",
                 "jk": "L",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 34,
@@ -2150,7 +2251,8 @@ jobs:
                 "pendidikan": "DIII (Kesling)",
                 "ttl": "Selayar,14 Februari 1976",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 35,
@@ -2163,7 +2265,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Dokter Gigi)",
                 "ttl": "Ujung Pandang, 18 September 1978",
                 "jk": "L",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 36,
@@ -2176,7 +2279,8 @@ jobs:
                 "pendidikan": "S1   Profesi (perawat)",
                 "ttl": "SEKUPANG, 22 oktober 1988",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 37,
@@ -2189,7 +2293,8 @@ jobs:
                 "pendidikan": "S1   Profesi (perawat)",
                 "ttl": "polong 16 okt 1972",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 38,
@@ -2202,7 +2307,8 @@ jobs:
                 "pendidikan": "S1 Profesi (Profesi Bidan)",
                 "ttl": "Laloasa 12 September 1987",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             },
             {
                 "no": 39,
@@ -2215,20 +2321,31 @@ jobs:
                 "pendidikan": "S1 (Perawat)",
                 "ttl": "Ujung Pandang, 12-05-1969",
                 "jk": "P",
-                "foto": ""
+                "foto": "",
+                "bound_device_id": ""
             }
         ];
 
         // Koordinat UPT Puskesmas Barugaia, Kec. Bontomanai, Kab. Kepulauan Selayar
         const PUSKESMAS_LAT = -6.0854;
         const PUSKESMAS_LON = 120.4712;
-        const MAX_RADIUS_METERS = 150;
+        const MAX_RADIUS_METERS = 100; // Diperketat dari 150m ke 100m
 
         let employees = [];
         let attendanceLogs = [];
         let customHolidays = [];
         let adminPassword = "123456";
         let isBypassActive = false;
+        let isAntiFakeGpsActive = true;
+
+        // Parameter Sensitivitas Anti Fake GPS (Diperketat v5)
+        const MIN_ALLOWED_GPS_ACCURACY = 2.5;   // Blokir akurasi sintetis emulator (0m - 2.4m)
+        const MAX_ALLOWED_GPS_ACCURACY = 35;    // Wajib sinyal satelit GNSS presisi (<= 35m)
+        const MIN_GPS_SAMPLES = 4;              // Wajib minimal 4 sampel satelit beruntun
+        const GPS_SAMPLE_TIMEOUT_MS = 8500;     // Batas waktu pengumpulan 4 sampel (8.5 detik)
+        const MAX_GPS_TIMESTAMP_AGE_MS = 10000; // Tolak cache lokasi lebih tua dari 10 detik
+        const MAX_INTRA_SCAN_SPEED_MPS = 8;     // Maks. kecepatan antar-sampel saat scan (8 m/s ≈ 28.8 km/jam)
+        const MAX_TELEPORT_SPEED_MPS = 18;      // Maks. kecepatan antar-sesi absensi (18 m/s ≈ 64.8 km/jam)
         let isAdminLoggedIn = false;
         let selectedEmployeeForPhotoNip = null;
         let activeLoggedInEmployee = null;
@@ -2460,6 +2577,7 @@ jobs:
                     employees = Object.values(data).map(e => {
                         e.nip = normalizeNip(e.nip);
                         if (!e.nip_display) e.nip_display = e.nip;
+                        if (typeof e.bound_device_id === 'undefined') e.bound_device_id = "";
                         if (e.nip === "197605142003121018") {
                             e.nama = "AHMUDDIN, S.Kep., Ns.";
                             e.pangkat = "Pembina Tk.I / IVb";
@@ -2489,6 +2607,14 @@ jobs:
                     isBypassActive = val;
                     document.getElementById('toggle-bypass').checked = isBypassActive;
                     updateBypassBadgeUI();
+                }
+            });
+
+            db.ref('settings/isAntiFakeGpsActive').on('value', (snapshot) => {
+                const val = snapshot.val();
+                if (val !== null) {
+                    isAntiFakeGpsActive = val;
+                    updateAntiFakeGpsBadgeUI();
                 }
             });
         }
@@ -2547,6 +2673,207 @@ jobs:
             }
         }
 
+        // ============================================================
+        // FITUR ANTI TITIP ABSEN: STRICT 1-TO-1 DEVICE BINDING & FP
+        // ============================================================
+        function computeDeviceHardwareFingerprint() {
+            const rawSignals = [
+                navigator.userAgent || '',
+                navigator.platform || '',
+                navigator.language || '',
+                `${screen.width}x${screen.height}x${screen.colorDepth}`,
+                String(window.devicePixelRatio || 1),
+                String(navigator.hardwareConcurrency || 0),
+                String(navigator.deviceMemory || 0),
+                String(navigator.maxTouchPoints || 0),
+                Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+            ];
+
+            // Ekstrak identitas GPU WebGL
+            try {
+                const glCanvas = document.createElement('canvas');
+                const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (debugInfo) {
+                        rawSignals.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '');
+                        rawSignals.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '');
+                    }
+                }
+            } catch (e) {}
+
+            // Ekstrak Canvas 2D Rendering Signature
+            try {
+                const c = document.createElement('canvas');
+                c.width = 220;
+                c.height = 32;
+                const ctx = c.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#0f766e';
+                ctx.fillRect(2, 2, 90, 20);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText('PKM-BARUGAIA-FP-2026', 6, 6);
+                rawSignals.push(c.toDataURL().slice(-64));
+            } catch (e) {}
+
+            // Dual FNV-1a 32-bit hash -> 64-bit hex fingerprint
+            const joined = rawSignals.join('|');
+            let h1 = 0x811c9dc5;
+            let h2 = 0x01000193;
+            for (let i = 0; i < joined.length; i++) {
+                const ch = joined.charCodeAt(i);
+                h1 ^= ch;
+                h1 = Math.imul(h1, 0x01000193);
+                h2 ^= (ch + i);
+                h2 = Math.imul(h2, 0x85ebca6b);
+            }
+            return 'fp_' + (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
+        }
+
+        function getOrCreateDeviceUUID() {
+            let deviceId = null;
+            try {
+                deviceId = localStorage.getItem('pkm_barugaia_device_uuid') || sessionStorage.getItem('pkm_barugaia_device_uuid');
+            } catch (e) {}
+
+            if (!deviceId) {
+                deviceId = 'dev_' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = (crypto && crypto.getRandomValues)
+                        ? (crypto.getRandomValues(new Uint8Array(1))[0] & 15)
+                        : (Math.random() * 16 | 0);
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+
+            try {
+                localStorage.setItem('pkm_barugaia_device_uuid', deviceId);
+                sessionStorage.setItem('pkm_barugaia_device_uuid', deviceId);
+            } catch (e) {}
+
+            return deviceId;
+        }
+
+        function getDeviceMetaSummary() {
+            const ua = navigator.userAgent || '';
+            let os = 'Perangkat';
+            if (/Android/i.test(ua)) os = 'Android';
+            else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+            else if (/Windows/i.test(ua)) os = 'Windows';
+            else if (/Mac/i.test(ua)) os = 'macOS';
+            return `${os} • ${screen.width}x${screen.height}`;
+        }
+
+        function syncEmployeeBindingToStorage(empIdx) {
+            if (isCloudAvailable && db) {
+                db.ref(`employees/${empIdx}`).update({
+                    bound_device_id: employees[empIdx].bound_device_id || "",
+                    bound_device_fp: employees[empIdx].bound_device_fp || "",
+                    bound_device_meta: employees[empIdx].bound_device_meta || "",
+                    bound_at: employees[empIdx].bound_at || ""
+                });
+            }
+            saveEmployeesToLocalStorage();
+            renderAdminEmployeeTable(document.getElementById('search-employee-admin')?.value || "");
+        }
+
+        function verifyAndBindEmployeeDevice(emp) {
+            // 1. Blokir browser otomasi / bot / emulator headless
+            if (navigator.webdriver === true && !isBypassActive) {
+                return {
+                    allowed: false,
+                    reason: "Akses Ditolak! Terdeteksi browser otomasi/emulator tidak sah."
+                };
+            }
+
+            const currentDeviceUUID = getOrCreateDeviceUUID();
+            const currentDeviceFP = computeDeviceHardwareFingerprint();
+            const cleanNip = normalizeNip(emp.nip);
+            const empIdx = employees.findIndex(e => normalizeNip(e.nip) === cleanNip);
+
+            // 2. CEK ARAH-1 (1 HP = 1 NIP): Perangkat ini tidak boleh sudah terikat ke NIP lain
+            const otherOwner = employees.find(e =>
+                normalizeNip(e.nip) !== cleanNip &&
+                e.bound_device_id &&
+                e.bound_device_id === currentDeviceUUID
+            );
+
+            if (otherOwner && !isBypassActive) {
+                return {
+                    allowed: false,
+                    reason: `Akses Ditolak (Anti Titip Absen)! Perangkat ini sudah terdaftar permanen atas nama ${otherOwner.nama} (NIP. ${otherOwner.nip_display || otherOwner.nip}). 1 HP hanya untuk 1 pegawai.`
+                };
+            }
+
+            // 3. CEK ARAH-2: NIP ini tidak boleh dibuka dari perangkat/browser lain
+            if (emp.bound_device_id && emp.bound_device_id !== "") {
+                const isUuidMatch = (emp.bound_device_id === currentDeviceUUID);
+                const isFpMatch = (emp.bound_device_fp && emp.bound_device_fp === currentDeviceFP);
+
+                if (!isUuidMatch && !isBypassActive) {
+                    const hint = isFpMatch
+                        ? "Terdeteksi sesi baru / Mode Incognito pada perangkat. Gunakan browser utama Anda atau minta Admin mereset Device Binding."
+                        : `NIP ${emp.nip_display || emp.nip} sudah terikat pada perangkat lain (${emp.bound_device_meta || 'HP Terdaftar'}). Hubungi Admin jika mengganti HP.`;
+                    return {
+                        allowed: false,
+                        reason: `Akses Ditolak (Device Binding Ketat)! ${hint}`
+                    };
+                }
+
+                // Lengkapi fingerprint pada data lama yang belum memiliki FP
+                if (isUuidMatch && !emp.bound_device_fp && empIdx !== -1) {
+                    employees[empIdx].bound_device_fp = currentDeviceFP;
+                    employees[empIdx].bound_device_meta = getDeviceMetaSummary();
+                    syncEmployeeBindingToStorage(empIdx);
+                }
+
+                return { allowed: true, deviceId: currentDeviceUUID, fingerprint: currentDeviceFP };
+            }
+
+            // 4. CEK ANTI-INCOGNITO SAAT BINDING BARU
+            let isStoragePersistent = false;
+            try {
+                localStorage.setItem('pkm_barugaia_persist_test', '1');
+                isStoragePersistent = (localStorage.getItem('pkm_barugaia_persist_test') === '1');
+                localStorage.removeItem('pkm_barugaia_persist_test');
+            } catch (e) {}
+
+            if (!isStoragePersistent && !isBypassActive) {
+                return {
+                    allowed: false,
+                    reason: "Registrasi Perangkat Gagal! Nonaktifkan Mode Samaran (Incognito/Private) agar perangkat dapat diverifikasi."
+                };
+            }
+
+            // 5. Simpan ikatan perangkat baru secara atomik
+            if (empIdx !== -1) {
+                employees[empIdx].bound_device_id = currentDeviceUUID;
+                employees[empIdx].bound_device_fp = currentDeviceFP;
+                employees[empIdx].bound_device_meta = getDeviceMetaSummary();
+                employees[empIdx].bound_at = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' });
+                syncEmployeeBindingToStorage(empIdx);
+            }
+
+            return { allowed: true, deviceId: currentDeviceUUID, fingerprint: currentDeviceFP };
+        }
+
+        function resetEmployeeDeviceBinding(nip) {
+            const cleanNip = normalizeNip(nip);
+            const empIdx = employees.findIndex(e => normalizeNip(e.nip) === cleanNip);
+            if (empIdx === -1) return;
+            const emp = employees[empIdx];
+
+            if (confirm(`Lepas ikatan perangkat (Reset Device Binding) untuk pegawai "${emp.nama}"?\nPegawai dapat mendaftarkan perangkat baru pada login/absen berikutnya.`)) {
+                employees[empIdx].bound_device_id = "";
+                employees[empIdx].bound_device_fp = "";
+                employees[empIdx].bound_device_meta = "";
+                employees[empIdx].bound_at = "";
+                syncEmployeeBindingToStorage(empIdx);
+                showToast(`Ikatan perangkat untuk "${emp.nama}" berhasil di-reset!`, "success");
+            }
+        }
+
         function handleEmployeeLogin(e) {
             e.preventDefault();
             const rawNip = document.getElementById('login-nip-input').value;
@@ -2554,6 +2881,12 @@ jobs:
 
             if (!emp) {
                 showToast("NIP tidak ditemukan! Periksa kembali NIP ASN Anda.", "error");
+                return;
+            }
+
+            const deviceCheck = verifyAndBindEmployeeDevice(emp);
+            if (!deviceCheck.allowed) {
+                showToast(deviceCheck.reason, "error");
                 return;
             }
 
@@ -3622,7 +3955,119 @@ jobs:
             `).join('');
         }
 
+        let roseChartTabMode = 'status'; // 'status' | 'unit'
+        let ecgChartTabMode = 'waveform'; // 'waveform' | 'unit'
+
+        const UNIT_SHORT_LABELS = {
+            'Keperawatan': 'Keperawatan',
+            'KIA / Kebidanan': 'KIA / Bidan',
+            'Poli Umum / Medis': 'Poli Umum',
+            'Poli Gigi & Mulut': 'Poli Gigi',
+            'Farmasi': 'Farmasi',
+            'Gizi': 'Gizi',
+            'Kesehatan Lingkungan': 'Kesling',
+            'Surveilans & Epidemiologi': 'Surveilans',
+            'Administrasi & Manajemen': 'Administrasi'
+        };
+
+        function switchRoseChartTab(mode) {
+            roseChartTabMode = mode;
+            const btnStatus = document.getElementById('btn-rose-tab-status');
+            const btnUnit = document.getElementById('btn-rose-tab-unit');
+            const titleEl = document.getElementById('rose-chart-title');
+            const subEl = document.getElementById('rose-chart-subtitle');
+
+            if (mode === 'status') {
+                if (btnStatus) btnStatus.className = "py-1.5 px-2 rounded-lg text-[11px] font-bold transition bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow";
+                if (btnUnit) btnUnit.className = "py-1.5 px-2 rounded-lg text-[11px] font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/70";
+                if (titleEl) titleEl.innerText = "Nightingale Kehadiran";
+                if (subEl) subEl.innerText = "Proporsi kelopak presensi ASN hari ini";
+            } else {
+                if (btnUnit) btnUnit.className = "py-1.5 px-2 rounded-lg text-[11px] font-bold transition bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow";
+                if (btnStatus) btnStatus.className = "py-1.5 px-2 rounded-lg text-[11px] font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/70";
+                if (titleEl) titleEl.innerText = "Nightingale Per Unit";
+                if (subEl) subEl.innerText = "Radius kelopak berdasarkan % hadir tiap unit";
+            }
+            renderAttendanceCharts();
+        }
+
+        function switchEcgChartTab(mode) {
+            ecgChartTabMode = mode;
+            const btnWave = document.getElementById('btn-ecg-tab-waveform');
+            const btnUnit = document.getElementById('btn-ecg-tab-unit');
+            const titleEl = document.getElementById('ecg-chart-title');
+            const subEl = document.getElementById('ecg-chart-subtitle');
+            const rangeSelect = document.getElementById('chart-time-range');
+
+            if (mode === 'waveform') {
+                if (btnWave) btnWave.className = "py-1.5 px-3 rounded-lg text-[11px] font-bold transition bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow";
+                if (btnUnit) btnUnit.className = "py-1.5 px-3 rounded-lg text-[11px] font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/70";
+                if (titleEl) titleEl.innerText = "ECG Telemetry Tren Kehadiran";
+                if (subEl) subEl.innerText = "Monitor gelombang kedisiplinan & rasio shift jaga";
+                if (rangeSelect) rangeSelect.classList.remove('hidden');
+            } else {
+                if (btnUnit) btnUnit.className = "py-1.5 px-3 rounded-lg text-[11px] font-bold transition bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow";
+                if (btnWave) btnWave.className = "py-1.5 px-3 rounded-lg text-[11px] font-semibold transition text-slate-300 hover:text-white hover:bg-slate-800/70";
+                if (titleEl) titleEl.innerText = "Distribusi Kehadiran Unit Layanan";
+                if (subEl) subEl.innerText = "Perbandingan Reguler, Petugas Jaga & Belum Hadir hari ini";
+                if (rangeSelect) rangeSelect.classList.add('hidden');
+            }
+            renderAttendanceCharts();
+        }
+
+        function computeUnitDistributionMetrics(todayLogs) {
+            const unitOrder = Object.keys(UNIT_SHORT_LABELS);
+            const dynamicUnits = Array.from(new Set(employees.map(e => e.unit).filter(Boolean)));
+            const allUnits = [...unitOrder, ...dynamicUnits.filter(u => !unitOrder.includes(u))];
+
+            const regNips = new Set(
+                todayLogs
+                    .filter(l => getLogCategory(l) === 'REGULER' && (l.type === 'DATANG' || l.type === 'PULANG') && !String(l.status || '').includes('ALPA'))
+                    .map(l => normalizeNip(l.nip))
+            );
+            const jagaNips = new Set(
+                todayLogs
+                    .filter(l => getLogCategory(l) === 'JAGA' && (l.type === 'DATANG JAGA' || l.type === 'LEPAS JAGA'))
+                    .map(l => normalizeNip(l.nip))
+                    .filter(nip => !regNips.has(nip))
+            );
+
+            return allUnits
+                .map(unitName => {
+                    const unitEmps = employees.filter(e => String(e.unit) === String(unitName));
+                    const total = unitEmps.length;
+                    let reg = 0;
+                    let jaga = 0;
+
+                    unitEmps.forEach(emp => {
+                        const cleanNip = normalizeNip(emp.nip);
+                        if (regNips.has(cleanNip)) reg++;
+                        else if (jagaNips.has(cleanNip)) jaga++;
+                    });
+
+                    const hadir = reg + jaga;
+                    const belum = Math.max(0, total - hadir);
+                    const pct = total > 0 ? Math.round((hadir / total) * 100) : 0;
+
+                    return {
+                        unit: unitName,
+                        shortLabel: UNIT_SHORT_LABELS[unitName] || unitName,
+                        total,
+                        reg,
+                        jaga,
+                        hadir,
+                        belum,
+                        pct
+                    };
+                })
+                .filter(item => item.total > 0);
+        }
+
         function renderAttendanceCharts() {
+            const pieCanvas = document.getElementById('todayPieChart');
+            const barCanvas = document.getElementById('trendBarChart');
+            if (!pieCanvas || !barCanvas) return;
+
             const now = new Date();
             const todayStr = getLocalDateStr(now);
             const todayLogs = attendanceLogs.filter(l => l.date === todayStr);
@@ -3639,93 +4084,490 @@ jobs:
                     .map(l => normalizeNip(l.nip))
                     .filter(nip => !regulerHadirNips.has(nip))
             );
+
             const regCount = regulerHadirNips.size;
             const jagaCount = jagaHadirNips.size;
-
             const totalHadir = Math.min(totalEmployeesCount, regCount + jagaCount);
+            const alpaCount = Math.max(0, totalEmployeesCount - totalHadir);
             const pctHadir = Math.round((totalHadir / totalEmployeesCount) * 100);
-            document.getElementById('today-percentage-badge').innerText = `${pctHadir}% Hadir (${totalHadir}/${totalEmployeesCount})`;
 
-            const ctxPie = document.getElementById('todayPieChart').getContext('2d');
+            const badgePct = document.getElementById('today-percentage-badge');
+            if (badgePct) badgePct.innerText = `${pctHadir}% Hadir (${totalHadir}/${totalEmployeesCount})`;
+
+            const bpmBadge = document.getElementById('ecg-live-bpm-badge');
+            if (bpmBadge) bpmBadge.innerText = `RATE: ${pctHadir}% • ${employees.length} ASN`;
+
+            const unitMetrics = computeUnitDistributionMetrics(todayLogs);
+
+            const glassTooltipConfig = {
+                backgroundColor: 'rgba(2, 12, 20, 0.94)',
+                titleColor: '#5eead4',
+                bodyColor: '#f0f9ff',
+                borderColor: 'rgba(20, 184, 166, 0.45)',
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 10,
+                titleFont: { family: "'Orbitron', sans-serif", size: 11, weight: 'bold' },
+                bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+            };
+
+            const neonGlowPlugin = {
+                id: 'neonGlow',
+                beforeDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(45, 212, 191, 0.35)';
+                    ctx.shadowBlur = 12;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 2;
+                },
+                afterDatasetsDraw(chart) {
+                    chart.ctx.restore();
+                }
+            };
+
+            const ecgGridPlugin = {
+                id: 'ecgClinicalGrid',
+                beforeDraw(chart) {
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return;
+                    const { left, top, right, bottom } = chartArea;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(left, top, right - left, bottom - top);
+                    ctx.clip();
+
+                    ctx.strokeStyle = 'rgba(20, 184, 166, 0.06)';
+                    ctx.lineWidth = 0.7;
+                    for (let x = left; x <= right; x += 14) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, top);
+                        ctx.lineTo(x, bottom);
+                        ctx.stroke();
+                    }
+                    for (let y = top; y <= bottom; y += 14) {
+                        ctx.beginPath();
+                        ctx.moveTo(left, y);
+                        ctx.lineTo(right, y);
+                        ctx.stroke();
+                    }
+
+                    ctx.strokeStyle = 'rgba(45, 212, 191, 0.13)';
+                    ctx.lineWidth = 1;
+                    for (let x = left; x <= right; x += 56) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, top);
+                        ctx.lineTo(x, bottom);
+                        ctx.stroke();
+                    }
+                    for (let y = top; y <= bottom; y += 56) {
+                        ctx.beginPath();
+                        ctx.moveTo(left, y);
+                        ctx.lineTo(right, y);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            };
+
+            const livePulseNodePlugin = {
+                id: 'livePulseNode',
+                afterDatasetsDraw(chart) {
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data || meta.data.length === 0) return;
+                    const lastPoint = meta.data[meta.data.length - 1];
+                    if (!lastPoint) return;
+
+                    const { ctx } = chart;
+                    const { x, y } = lastPoint.getProps(['x', 'y'], true);
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x, y, 9, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(45, 212, 191, 0.22)';
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#5eead4';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.restore();
+                }
+            };
+
+            // 1. PANEL KIRI: NIGHTINGALE POLAR ROSE CHART
+            const ctxPie = pieCanvas.getContext('2d');
             if (todayPieChartObj) todayPieChartObj.destroy();
 
-            const alpaCount = Math.max(0, totalEmployeesCount - totalHadir);
-
-            todayPieChartObj = new Chart(ctxPie, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Absen Reguler', 'Petugas Jaga', 'Belum/Tidak Hadir'],
-                    datasets: [{
-                        data: [regCount, jagaCount, alpaCount],
-                        backgroundColor: ['#10B981', '#06B6D4', '#F43F5E'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#CBD5E1', font: { size: 10 } } }
-                    }
-                }
-            });
-
-            const rangeType = document.getElementById('chart-time-range').value;
-            let labels = [];
-            let percentData = [];
-
-            if (rangeType === 'weekly') {
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date();
-                    d.setDate(now.getDate() - i);
-                    const dStr = getLocalDateStr(d);
-                    const dayLabel = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
-                    labels.push(dayLabel);
-
-                    const logsD = attendanceLogs.filter(l => l.date === dStr && l.status && (l.status.includes('Tepat') || l.status.includes('Luar Jam') || l.status.includes('Terlambat')));
-                    const hadirD = new Set(logsD.map(l => normalizeNip(l.nip))).size;
-                    const pct = Math.round((hadirD / totalEmployeesCount) * 100);
-                    percentData.push(pct > 100 ? 100 : pct);
-                }
+            if (roseChartTabMode === 'status') {
+                todayPieChartObj = new Chart(ctxPie, {
+                    type: 'polarArea',
+                    data: {
+                        labels: [
+                            `Absen Reguler (${regCount})`,
+                            `Petugas Jaga (${jagaCount})`,
+                            `Belum / Alpa (${alpaCount})`
+                        ],
+                        datasets: [{
+                            data: [regCount, jagaCount, alpaCount],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.72)',
+                                'rgba(6, 182, 212, 0.72)',
+                                'rgba(244, 63, 94, 0.68)'
+                            ],
+                            borderColor: ['#34d399', '#22d3ee', '#fb7185'],
+                            borderWidth: 1.8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                ticks: { display: false },
+                                grid: { color: 'rgba(45, 212, 191, 0.16)', circular: true },
+                                angleLines: { color: 'rgba(45, 212, 191, 0.16)' }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: '#e2e8f0',
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    padding: 11,
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 10.5, weight: '600' }
+                                }
+                            },
+                            tooltip: {
+                                ...glassTooltipConfig,
+                                callbacks: {
+                                    label: (ctx) => {
+                                        const val = ctx.raw || 0;
+                                        const pct = Math.round((val / totalEmployeesCount) * 100);
+                                        return ` ${val} ASN (${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [neonGlowPlugin]
+                });
             } else {
-                const currentYearMonth = todayStr.substring(0, 7);
-                const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const dayFormatted = String(day).padStart(2, '0');
-                    const dStr = `${currentYearMonth}-${dayFormatted}`;
-                    labels.push(`${day}`);
+                const rosePetalColors = [
+                    'rgba(16, 185, 129, 0.75)',
+                    'rgba(20, 184, 166, 0.75)',
+                    'rgba(6, 182, 212, 0.75)',
+                    'rgba(56, 189, 248, 0.75)',
+                    'rgba(52, 211, 153, 0.75)',
+                    'rgba(45, 212, 191, 0.75)',
+                    'rgba(34, 211, 238, 0.75)',
+                    'rgba(251, 191, 36, 0.72)',
+                    'rgba(129, 140, 248, 0.72)'
+                ];
 
-                    const logsD = attendanceLogs.filter(l => l.date === dStr && l.status && (l.status.includes('Tepat') || l.status.includes('Luar Jam') || l.status.includes('Terlambat')));
-                    const hadirD = new Set(logsD.map(l => normalizeNip(l.nip))).size;
-                    const pct = Math.round((hadirD / totalEmployeesCount) * 100);
-                    percentData.push(pct > 100 ? 100 : pct);
-                }
+                todayPieChartObj = new Chart(ctxPie, {
+                    type: 'polarArea',
+                    data: {
+                        labels: unitMetrics.map(u => u.shortLabel),
+                        datasets: [{
+                            label: 'Kehadiran Unit (%)',
+                            data: unitMetrics.map(u => u.pct),
+                            backgroundColor: unitMetrics.map((_, idx) => rosePetalColors[idx % rosePetalColors.length]),
+                            borderColor: 'rgba(240, 249, 255, 0.65)',
+                            borderWidth: 1.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                min: 0,
+                                max: 100,
+                                ticks: { display: false, stepSize: 25 },
+                                grid: { color: 'rgba(45, 212, 191, 0.16)', circular: true },
+                                angleLines: { color: 'rgba(45, 212, 191, 0.16)' },
+                                pointLabels: {
+                                    display: true,
+                                    centerPointLabels: true,
+                                    color: '#cbd5e1',
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 9, weight: '600' }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                ...glassTooltipConfig,
+                                callbacks: {
+                                    title: (items) => unitMetrics[items[0].dataIndex]?.unit || '',
+                                    label: (ctx) => {
+                                        const m = unitMetrics[ctx.dataIndex];
+                                        if (!m) return '';
+                                        return [
+                                            ` Tingkat Hadir: ${m.pct}% (${m.hadir}/${m.total} ASN)`,
+                                            ` Reguler: ${m.reg} • Jaga: ${m.jaga} • Belum: ${m.belum}`
+                                        ];
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [neonGlowPlugin]
+                });
             }
 
-            const ctxBar = document.getElementById('trendBarChart').getContext('2d');
+            // 2. PANEL KANAN: ECG PULSE WAVEFORM MONITOR vs DISTRIBUSI UNIT LAYANAN
+            const ctxBar = barCanvas.getContext('2d');
             if (trendBarChartObj) trendBarChartObj.destroy();
 
-            trendBarChartObj = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Persentase Kehadiran ASN (%)',
-                        data: percentData,
-                        backgroundColor: '#14B8A6',
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { min: 0, max: 100, ticks: { color: '#94A3B8', font: { size: 9 } }, grid: { color: 'rgba(148,163,184,0.1)' } },
-                        x: { ticks: { color: '#94A3B8', font: { size: 9 } }, grid: { display: false } }
-                    },
-                    plugins: { legend: { display: false } }
+            if (ecgChartTabMode === 'waveform') {
+                const rangeType = document.getElementById('chart-time-range')?.value || 'weekly';
+                let labels = [];
+                let totalPctSeries = [];
+                let jagaPctSeries = [];
+
+                const pushEcgDayPoint = (dStr, dayLabel) => {
+                    labels.push(dayLabel);
+                    const logsD = attendanceLogs.filter(
+                        l => l.date === dStr && l.status && (
+                            l.status.includes('Tepat') ||
+                            l.status.includes('Luar Jam') ||
+                            l.status.includes('Terlambat')
+                        )
+                    );
+                    const regNipsD = new Set(
+                        logsD.filter(l => getLogCategory(l) === 'REGULER').map(l => normalizeNip(l.nip))
+                    );
+                    const jagaNipsD = new Set(
+                        logsD.filter(l => getLogCategory(l) === 'JAGA')
+                            .map(l => normalizeNip(l.nip))
+                            .filter(nip => !regNipsD.has(nip))
+                    );
+
+                    const totalDayPct = Math.min(100, Math.round(((regNipsD.size + jagaNipsD.size) / totalEmployeesCount) * 100));
+                    const jagaDayPct = Math.min(100, Math.round((jagaNipsD.size / totalEmployeesCount) * 100));
+
+                    totalPctSeries.push(totalDayPct);
+                    jagaPctSeries.push(jagaDayPct);
+                };
+
+                if (rangeType === 'weekly') {
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(now.getDate() - i);
+                        const dStr = getLocalDateStr(d);
+                        const dayLabel = d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' });
+                        pushEcgDayPoint(dStr, dayLabel);
+                    }
+                } else {
+                    const currentYearMonth = todayStr.substring(0, 7);
+                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dayFormatted = String(day).padStart(2, '0');
+                        const dStr = `${currentYearMonth}-${dayFormatted}`;
+                        pushEcgDayPoint(dStr, `${day}`);
+                    }
                 }
-            });
+
+                const ecgFillGrad = ctxBar.createLinearGradient(0, 0, 0, 210);
+                ecgFillGrad.addColorStop(0, 'rgba(45, 212, 191, 0.36)');
+                ecgFillGrad.addColorStop(0.7, 'rgba(6, 182, 212, 0.08)');
+                ecgFillGrad.addColorStop(1, 'rgba(2, 12, 20, 0.0)');
+
+                trendBarChartObj = new Chart(ctxBar, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Pulse Kehadiran Total (%)',
+                                data: totalPctSeries,
+                                borderColor: '#2dd4bf',
+                                backgroundColor: ecgFillGrad,
+                                borderWidth: 2.6,
+                                tension: 0.25,
+                                fill: true,
+                                pointRadius: rangeType === 'weekly' ? 4 : 2.5,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: '#020c14',
+                                pointBorderColor: '#5eead4',
+                                pointBorderWidth: 2
+                            },
+                            {
+                                label: 'Gelombang Petugas Jaga (%)',
+                                data: jagaPctSeries,
+                                borderColor: '#38bdf8',
+                                borderWidth: 1.8,
+                                borderDash: [4, 4],
+                                tension: 0.25,
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 4,
+                                pointBackgroundColor: '#38bdf8'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    color: '#94a3b8',
+                                    stepSize: 25,
+                                    font: { family: "'Orbitron', sans-serif", size: 9 },
+                                    callback: (val) => `${val}%`
+                                },
+                                grid: { color: 'rgba(20, 184, 166, 0.12)', drawBorder: false }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#cbd5e1',
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' }
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    color: '#cbd5e1',
+                                    usePointStyle: true,
+                                    pointStyle: 'line',
+                                    boxWidth: 14,
+                                    padding: 10,
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 10 }
+                                }
+                            },
+                            tooltip: {
+                                ...glassTooltipConfig,
+                                callbacks: {
+                                    label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}%`
+                                }
+                            }
+                        }
+                    },
+                    plugins: [ecgGridPlugin, neonGlowPlugin, livePulseNodePlugin]
+                });
+            } else {
+                const gradUnitReg = ctxBar.createLinearGradient(0, 0, 0, 210);
+                gradUnitReg.addColorStop(0, 'rgba(16, 185, 129, 0.95)');
+                gradUnitReg.addColorStop(1, 'rgba(13, 148, 136, 0.35)');
+
+                const gradUnitJaga = ctxBar.createLinearGradient(0, 0, 0, 210);
+                gradUnitJaga.addColorStop(0, 'rgba(56, 189, 248, 0.95)');
+                gradUnitJaga.addColorStop(1, 'rgba(6, 182, 212, 0.35)');
+
+                trendBarChartObj = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: unitMetrics.map(u => u.shortLabel),
+                        datasets: [
+                            {
+                                label: 'Hadir Reguler',
+                                data: unitMetrics.map(u => u.reg),
+                                backgroundColor: gradUnitReg,
+                                borderColor: '#34d399',
+                                borderWidth: { top: 1.5, left: 0, right: 0, bottom: 0 },
+                                borderRadius: 4,
+                                stack: 'unitStack',
+                                barPercentage: 0.62
+                            },
+                            {
+                                label: 'Petugas Jaga',
+                                data: unitMetrics.map(u => u.jaga),
+                                backgroundColor: gradUnitJaga,
+                                borderColor: '#38bdf8',
+                                borderWidth: { top: 1.5, left: 0, right: 0, bottom: 0 },
+                                borderRadius: 4,
+                                stack: 'unitStack',
+                                barPercentage: 0.62
+                            },
+                            {
+                                label: 'Belum / Alpa',
+                                data: unitMetrics.map(u => u.belum),
+                                backgroundColor: 'rgba(244, 63, 94, 0.38)',
+                                borderColor: 'rgba(251, 113, 133, 0.75)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                stack: 'unitStack',
+                                barPercentage: 0.62
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#94a3b8',
+                                    precision: 0,
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 10 },
+                                    callback: (val) => `${val} ASN`
+                                },
+                                grid: { color: 'rgba(20, 184, 166, 0.10)', drawBorder: false }
+                            },
+                            x: {
+                                stacked: true,
+                                ticks: {
+                                    color: '#e2e8f0',
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 9.5, weight: '600' },
+                                    maxRotation: 25,
+                                    minRotation: 0
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    color: '#cbd5e1',
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 7,
+                                    padding: 10,
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", size: 10 }
+                                }
+                            },
+                            tooltip: {
+                                ...glassTooltipConfig,
+                                callbacks: {
+                                    title: (items) => {
+                                        const m = unitMetrics[items[0].dataIndex];
+                                        return m ? `${m.unit} (${m.pct}% Hadir)` : '';
+                                    },
+                                    label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} ASN`
+                                }
+                            }
+                        }
+                    },
+                    plugins: [ecgGridPlugin, neonGlowPlugin]
+                });
+            }
         }
 
         // ANIMASI 3D TEMA TENAGA MEDIS (DNA DOUBLE HELIX + FLOATING MEDICAL CROSSES + BIO PARTICLES)
@@ -3874,6 +4716,7 @@ jobs:
                 employees = JSON.parse(savedEmployees).map(emp => {
                     emp.nip = normalizeNip(emp.nip);
                     if (!emp.nip_display) emp.nip_display = emp.nip;
+                    if (typeof emp.bound_device_id === 'undefined') emp.bound_device_id = "";
                     if (emp.nip === "197605142003121018") {
                         emp.nama = "AHMUDDIN, S.Kep., Ns.";
                         emp.pangkat = "Pembina Tk.I / IVb";
@@ -3901,6 +4744,11 @@ jobs:
                 document.getElementById('toggle-bypass').checked = isBypassActive;
                 updateBypassBadgeUI();
             }
+            const savedAntiFakeGps = localStorage.getItem('pkm_barugaia_antifakegps');
+            if (savedAntiFakeGps !== null) {
+                isAntiFakeGpsActive = JSON.parse(savedAntiFakeGps);
+            }
+            updateAntiFakeGpsBadgeUI();
         }
 
         function saveEmployeesToLocalStorage() { localStorage.setItem('pkm_barugaia_employees', JSON.stringify(employees)); }
@@ -3958,6 +4806,12 @@ jobs:
             
             if (!emp) {
                 showToast(`NIP "${employeeIdentifier}" tidak terdaftar dalam database pegawai UPT Puskesmas Barugaia!`, 'error');
+                return;
+            }
+
+            const deviceCheck = verifyAndBindEmployeeDevice(emp);
+            if (!deviceCheck.allowed) {
+                showToast(deviceCheck.reason, 'error');
                 return;
             }
 
@@ -4059,7 +4913,8 @@ jobs:
                     type: scanType,
                     status: isWithinTimeWindow ? "Tepat Waktu" : "Luar Jam (Bypass)",
                     isBypass: isBypassActive,
-                    method: scanSource
+                    method: scanSource,
+                    deviceId: getOrCreateDeviceUUID()
                 };
 
                 if (isCloudAvailable && db) {
@@ -4084,23 +4939,14 @@ jobs:
             if (isBypassActive) {
                 proceedScan(true);
             } else {
-                if ("geolocation" in navigator) {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                            const lat = pos.coords.latitude;
-                            const lon = pos.coords.longitude;
-                            const distMeters = getHaversineDistance(lat, lon, PUSKESMAS_LAT, PUSKESMAS_LON);
-                            proceedScan(distMeters <= MAX_RADIUS_METERS);
-                        },
-                        () => {
-                            showToast("Gagal mengambil koordinat GPS. Menggunakan verifikasi lokal Puskesmas.", "warning");
-                            proceedScan(true);
-                        },
-                        { enableHighAccuracy: true, timeout: 5000 }
-                    );
-                } else {
+                showToast("Memverifikasi keaslian sinyal GPS & radius Puskesmas...", "info");
+                verifyRealGpsLocation().then((gpsResult) => {
+                    if (!gpsResult.valid) {
+                        showToast(gpsResult.reason, "error");
+                        return;
+                    }
                     proceedScan(true);
-                }
+                });
             }
         }
 
@@ -4133,6 +4979,218 @@ jobs:
                       Math.cos(φ1) * Math.cos(φ2) *
                       Math.sin(Δλ/2) * Math.sin(Δλ/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function handleAntiFakeGpsToggle(checked) {
+            isAntiFakeGpsActive = checked;
+            if (isCloudAvailable && db) {
+                db.ref('settings/isAntiFakeGpsActive').set(isAntiFakeGpsActive);
+            }
+            localStorage.setItem('pkm_barugaia_antifakegps', JSON.stringify(isAntiFakeGpsActive));
+            updateAntiFakeGpsBadgeUI();
+            showToast(
+                isAntiFakeGpsActive ? "Proteksi Anti Fake GPS DIAKTIFKAN." : "Proteksi Anti Fake GPS DINONAKTIFKAN.",
+                isAntiFakeGpsActive ? "success" : "warning"
+            );
+        }
+
+        function updateAntiFakeGpsBadgeUI() {
+            const badge = document.getElementById('badge-antifakegps-status');
+            const toggle = document.getElementById('toggle-anti-fake-gps');
+            if (toggle) toggle.checked = isAntiFakeGpsActive;
+            if (!badge) return;
+
+            if (isAntiFakeGpsActive) {
+                badge.className = "px-3 py-1 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/35";
+                badge.innerHTML = '<i class="fa-solid fa-satellite-dish mr-1"></i> Anti Fake GPS Aktif';
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-[11px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+                badge.innerHTML = '<i class="fa-solid fa-location-crosshairs mr-1"></i> GPS Standar';
+            }
+        }
+
+        function verifyRealGpsLocation() {
+            return new Promise((resolve) => {
+                if (!("geolocation" in navigator)) {
+                    resolve({ valid: false, reason: "Perangkat/browser tidak mendukung sensor GPS." });
+                    return;
+                }
+
+                const samples = [];
+                let watchId = null;
+                let isResolved = false;
+
+                const finish = (result) => {
+                    if (isResolved) return;
+                    isResolved = true;
+                    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+                    resolve(result);
+                };
+
+                const timeoutTimer = setTimeout(() => {
+                    if (samples.length >= MIN_GPS_SAMPLES) {
+                        evaluateGpsSamples(samples, finish);
+                    } else {
+                        finish({
+                            valid: false,
+                            reason: `Telemetri satelit tidak mencukupi (${samples.length}/${MIN_GPS_SAMPLES} sampel dalam ${GPS_SAMPLE_TIMEOUT_MS / 1000} dtk). Pastikan GPS Akurasi Tinggi aktif di area terbuka dan matikan Fake GPS!`
+                        });
+                    }
+                }, GPS_SAMPLE_TIMEOUT_MS);
+
+                watchId = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        const nowMs = Date.now();
+                        const posTs = pos.timestamp || nowMs;
+
+                        // Tolak koordinat hasil cache lama (> 10 detik)
+                        if (isAntiFakeGpsActive && Math.abs(nowMs - posTs) > MAX_GPS_TIMESTAMP_AGE_MS) {
+                            return;
+                        }
+
+                        // Pastikan setiap sampel memiliki timestamp yang progresif
+                        if (samples.length > 0 && posTs <= samples[samples.length - 1].timestamp) {
+                            return;
+                        }
+
+                        samples.push({
+                            lat: pos.coords.latitude,
+                            lon: pos.coords.longitude,
+                            accuracy: pos.coords.accuracy,
+                            altitude: pos.coords.altitude,
+                            altitudeAccuracy: pos.coords.altitudeAccuracy,
+                            speed: pos.coords.speed,
+                            heading: pos.coords.heading,
+                            timestamp: posTs
+                        });
+
+                        if (samples.length >= MIN_GPS_SAMPLES) {
+                            clearTimeout(timeoutTimer);
+                            evaluateGpsSamples(samples, finish);
+                        }
+                    },
+                    (err) => {
+                        clearTimeout(timeoutTimer);
+                        let msg = "Akses lokasi GPS ditolak atau tidak aktif.";
+                        if (err.code === 1) msg = "Izin akses lokasi (GPS) ditolak. Wajib izinkan GPS untuk presensi!";
+                        if (err.code === 2) msg = "Sinyal satelit GPS tidak tersedia.";
+                        if (err.code === 3) msg = "Waktu penguncian sinyal GPS habis. Pindah ke area yang lebih terbuka.";
+                        finish({ valid: false, reason: msg });
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: GPS_SAMPLE_TIMEOUT_MS - 500
+                    }
+                );
+            });
+        }
+
+        function evaluateGpsSamples(samples, finish) {
+            const latest = samples[samples.length - 1];
+            const distMeters = getHaversineDistance(latest.lat, latest.lon, PUSKESMAS_LAT, PUSKESMAS_LON);
+
+            // 1. Validasi Geofencing Radius Puskesmas
+            if (distMeters > MAX_RADIUS_METERS) {
+                finish({
+                    valid: false,
+                    reason: `Presensi ditolak! Jarak Anda ${Math.round(distMeters)} meter dari UPT Puskesmas Barugaia (Maks. ${MAX_RADIUS_METERS}m).`
+                });
+                return;
+            }
+
+            if (!isAntiFakeGpsActive) {
+                finish({ valid: true, distance: Math.round(distMeters), accuracy: Math.round(latest.accuracy) });
+                return;
+            }
+
+            // 2. Validasi Rentang Akurasi Satelit GNSS (2.5m - 35m)
+            if (latest.accuracy > MAX_ALLOWED_GPS_ACCURACY) {
+                finish({
+                    valid: false,
+                    reason: `Sinyal GPS terlalu lemah/kasar (±${Math.round(latest.accuracy)}m, maks. ${MAX_ALLOWED_GPS_ACCURACY}m). Pindah ke area terbuka atau matikan pengubah lokasi!`
+                });
+                return;
+            }
+
+            if (latest.accuracy < MIN_ALLOWED_GPS_ACCURACY) {
+                finish({
+                    valid: false,
+                    reason: `Terdeteksi akurasi GPS sintetis (±${latest.accuracy.toFixed(1)}m). Matikan aplikasi Fake GPS / Mock Location!`
+                });
+                return;
+            }
+
+            // 3. Deteksi Anomali Telemetri Hardware (Nilai Nol Bulat Buatan Mock Location)
+            const hasMockZeroAltitude = (latest.altitude === 0 && latest.altitudeAccuracy === null);
+            const hasMockZeroMotion = (latest.speed === 0 && latest.heading === 0);
+            if (hasMockZeroAltitude || hasMockZeroMotion) {
+                finish({
+                    valid: false,
+                    reason: "Terdeteksi injeksi telemetri Mock Location (Altitude/Heading sintetis). Presensi diblokir!"
+                });
+                return;
+            }
+
+            // 4. Deteksi Zero-Variance Coordinate Lock (GPS Asli Selalu Memiliki Micro-Jitter)
+            let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+            samples.forEach(s => {
+                if (s.lat < minLat) minLat = s.lat;
+                if (s.lat > maxLat) maxLat = s.lat;
+                if (s.lon < minLon) minLon = s.lon;
+                if (s.lon > maxLon) maxLon = s.lon;
+            });
+
+            const latSpan = maxLat - minLat;
+            const lonSpan = maxLon - minLon;
+            if (samples.length >= 3 && latSpan === 0 && lonSpan === 0) {
+                finish({
+                    valid: false,
+                    reason: "Terdeteksi Fake GPS / Mock Location (Koordinat terkunci 100% statis tanpa fluktuasi satelit alami). Presensi diblokir!"
+                });
+                return;
+            }
+
+            // 5. Deteksi Lompatan Koordinat Intra-Scan
+            for (let i = 1; i < samples.length; i++) {
+                const jumpDist = getHaversineDistance(samples[i - 1].lat, samples[i - 1].lon, samples[i].lat, samples[i].lon);
+                const timeDiffSec = Math.max((samples[i].timestamp - samples[i - 1].timestamp) / 1000, 0.3);
+                if ((jumpDist / timeDiffSec) > MAX_INTRA_SCAN_SPEED_MPS) {
+                    finish({
+                        valid: false,
+                        reason: "Terdeteksi lompatan koordinat GPS mendadak saat verifikasi (Spoofing). Presensi diblokir!"
+                    });
+                    return;
+                }
+            }
+
+            // 6. Deteksi Teleportasi Antar-Sesi Presensi
+            try {
+                const lastGpsRaw = localStorage.getItem('pkm_barugaia_last_valid_gps');
+                if (lastGpsRaw) {
+                    const lastGps = JSON.parse(lastGpsRaw);
+                    const distFromPrev = getHaversineDistance(lastGps.lat, lastGps.lon, latest.lat, latest.lon);
+                    const elapsedSec = (Date.now() - lastGps.time) / 1000;
+                    if (elapsedSec > 0 && elapsedSec < 3600 && (distFromPrev / elapsedSec) > MAX_TELEPORT_SPEED_MPS) {
+                        finish({
+                            valid: false,
+                            reason: "Terdeteksi perpindahan lokasi ekstrem dari posisi sebelumnya (Indikasi Fake GPS)."
+                        });
+                        return;
+                    }
+                }
+                localStorage.setItem('pkm_barugaia_last_valid_gps', JSON.stringify({
+                    lat: latest.lat,
+                    lon: latest.lon,
+                    time: Date.now()
+                }));
+            } catch (e) {}
+
+            finish({
+                valid: true,
+                distance: Math.round(distMeters),
+                accuracy: Math.round(latest.accuracy)
+            });
         }
 
         function changeFeedUnitFilter() {
@@ -4448,7 +5506,7 @@ jobs:
             const paginatedEmployees = filtered.slice(startIndex, endIndex);
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-slate-400">Tidak ada data pegawai ASN ditemukan.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">Tidak ada data pegawai ASN ditemukan.</td></tr>';
             } else {
                 tbody.innerHTML = paginatedEmployees.map((emp, idx) => `
                     <tr class="hover:bg-slate-800/50 transition">
@@ -4471,7 +5529,17 @@ jobs:
                             <svg id="barcode-svg-${emp.nip}" class="h-9 bg-white p-1 rounded"></svg>
                         </td>
                         <td class="px-3 py-3 text-center">
+                            ${emp.bound_device_id
+                                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/35" title="ID: ${emp.bound_device_id}${emp.bound_device_meta ? ' | ' + emp.bound_device_meta : ''}${emp.bound_device_fp ? ' | FP: ' + emp.bound_device_fp : ''}${emp.bound_at ? ' | Terdaftar: ' + emp.bound_at : ''}"><i class="fa-solid fa-mobile-screen-button"></i> Terikat</span>`
+                                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">Belum Terikat</span>`
+                            }
+                        </td>
+                        <td class="px-3 py-3 text-center">
                             <div class="flex items-center justify-center gap-1 flex-wrap">
+                                ${emp.bound_device_id
+                                    ? `<button onclick="resetEmployeeDeviceBinding('${emp.nip}')" title="Reset Ikatan Perangkat (Unbind HP)" class="px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white rounded-lg text-xs font-semibold border border-cyan-500/30 transition"><i class="fa-solid fa-mobile-retro"></i></button>`
+                                    : ``
+                                }
                                 <button onclick="openEditEmployeeModal('${emp.nip}')" title="Edit Data Pegawai" class="px-2 py-1 bg-teal-600/20 hover:bg-teal-600 text-teal-300 hover:text-white rounded-lg text-xs font-semibold border border-teal-500/30 transition">
                                     <i class="fa-solid fa-user-pen"></i>
                                 </button>
@@ -5045,7 +6113,8 @@ jobs:
                 pendidikan: "-",
                 ttl: "-",
                 jk: jk, 
-                foto: "" 
+                foto: "",
+                bound_device_id: ""
             };
 
             employees.push(newEmployee);
