@@ -1,115 +1,224 @@
-name: Auto-Absen Alpa ASN PKM Barugaia
+name: Auto-Absen Alpa Reguler & Jaga ASN PKM Barugaia
 
 on:
   schedule:
-    - cron: '0 7 * * 1-6' # Pukul 15:00 WITA (07:00 UTC) Senin - Sabtu
+    - cron: '15 6 * * *'   # Pukul 14:15 WITA (06:15 UTC) - Cek Shift 1 Jaga (Setiap Hari)
+    - cron: '0 7 * * 1-6'  # Pukul 15:00 WITA (07:00 UTC) - Cek Absen Reguler (Senin - Sabtu)
+    - cron: '15 12 * * *'  # Pukul 20:15 WITA (12:15 UTC) - Cek Shift 2 Jaga (Setiap Hari)
   workflow_dispatch:
+    inputs:
+      target_mode:
+        description: 'Mode Eksekusi (auto / reguler / shift1 / shift2)'
+        required: false
+        default: 'auto'
 
 jobs:
   auto-absen:
     runs-on: ubuntu-latest
     steps:
-      - name: Execute Auto Absent Script
+      - name: Execute Auto Absent Reguler & Jaga Script
+        env:
+          TARGET_MODE: ${{ github.event.inputs.target_mode || 'auto' }}
         run: |
           node -e '
           const DB_URL = "https://e-absenpkmbarugaia-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+          function cleanNipStr(v) {
+            return String(v || "").replace(/\D/g, "");
+          }
+
+          function matchShift(logShift, targetShift) {
+            const s = String(logShift || "").toUpperCase();
+            const t = String(targetShift || "").toUpperCase();
+            return s === t || s.includes(t);
+          }
+
+          async function pushLog(logPayload) {
+            await fetch(`${DB_URL}/attendance_logs/${logPayload.id}.json`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(logPayload)
+            });
+          }
 
           async function run() {
             const now = new Date();
             const witaStr = now.toLocaleString("en-CA", { timeZone: "Asia/Makassar", hour12: false });
             const [todayStr, timePart] = witaStr.split(", ");
             const witaDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Makassar" }));
+            const witaHour = witaDate.getHours();
 
-            // 1. Cek Hari Minggu
-            if (witaDate.getDay() === 0) {
-              await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "SKIPPED_HOLIDAY", date: todayStr, reason: "Hari Minggu" })
-              });
-              console.log("Dilewati: Hari Minggu");
-              return;
+            // Tentukan mode tugas berdasarkan jadwal cron atau input manual
+            let mode = (process.env.TARGET_MODE || "auto").toLowerCase();
+            if (mode === "auto") {
+              if (witaHour === 14) mode = "shift1";
+              else if (witaHour === 15) mode = "reguler";
+              else if (witaHour >= 20) mode = "shift2";
+              else mode = "all";
             }
 
-            // 2. Cek Hari Libur Nasional / Cuti Bersama di Firebase
-            const holRes = await fetch(`${DB_URL}/holidays.json`);
-            const holData = await holRes.json();
-            const holidays = holData ? Object.values(holData) : [];
-            const foundHoliday = holidays.find(h => h && h.date === todayStr);
-            if (foundHoliday) {
-              await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: "SKIPPED_HOLIDAY", date: todayStr, reason: foundHoliday.desc || "Hari Libur" })
-              });
-              console.log("Dilewati: Hari Libur -", foundHoliday.desc);
-              return;
-            }
-
-            // 3. Ambil Data Master Pegawai & Log Presensi Hari Ini
-            const [empRes, logRes] = await Promise.all([
+            // Ambil data master pegawai, log hari ini, hari libur, dan jadwal jaga
+            const [empRes, logRes, holRes, schedRes] = await Promise.all([
               fetch(`${DB_URL}/employees.json`),
-              fetch(`${DB_URL}/attendance_logs.json`)
+              fetch(`${DB_URL}/attendance_logs.json`),
+              fetch(`${DB_URL}/holidays.json`),
+              fetch(`${DB_URL}/jaga_schedules/${todayStr}.json`)
             ]);
+
             const empData = await empRes.json();
             const logData = await logRes.json();
+            const holData = await holRes.json();
+            const todaySchedule = (await schedRes.json()) || {};
 
             const employees = empData ? Object.values(empData) : [];
+            const empMap = new Map(employees.map(e => [cleanNipStr(e.nip), e]));
             const allLogs = logData ? Object.values(logData) : [];
+            const todayLogs = allLogs.filter(l => l && String(l.date || "").trim() === todayStr);
+            const holidays = holData ? Object.values(holData) : [];
 
-            const presentNips = new Set(
-              allLogs
-                .filter(l => l && String(l.date || "").trim() === todayStr)
-                .map(l => String(l.nip || "").replace(/\D/g, ""))
-            );
-
-            // 4. Isi ALPA untuk Pegawai yang Belum Ada Log Sama Sekali Hari Ini
-            let addedCount = 0;
+            let addedReguler = 0;
+            let addedDatangJaga = 0;
+            let addedLepasJaga = 0;
+            let seq = 0;
             const baseTs = Date.now();
 
-            for (const emp of employees) {
-              const cleanNip = String(emp.nip || "").replace(/\D/g, "");
-              if (!cleanNip || presentNips.has(cleanNip)) continue;
+            // =========================================================
+            // A. PROSES AUTO-ALPA ABSEN REGULER (Senin - Sabtu Non-Libur)
+            // =========================================================
+            if (mode === "reguler" || mode === "all") {
+              const isSunday = witaDate.getDay() === 0;
+              const foundHoliday = holidays.find(h => h && h.date === todayStr);
 
-              const logId = baseTs + addedCount;
-              const alpaPayload = {
-                id: logId,
-                category: "REGULER",
-                shift: "-",
-                date: todayStr,
-                time: "15:00:00 WITA",
-                nip: cleanNip,
-                nip_display: emp.nip_display || cleanNip,
-                nama: emp.nama,
-                jabatan: emp.jabatan || "-",
-                unit: emp.unit || "-",
-                type: "ALPA",
-                status: "TIDAK HADIR (ALPA)",
-                isBypass: true,
-                method: "GitHub Actions Cron Job"
-              };
+              if (!isSunday && !foundHoliday) {
+                const presentNips = new Set(
+                  todayLogs.map(l => cleanNipStr(l.nip))
+                );
 
-              await fetch(`${DB_URL}/attendance_logs/${logId}.json`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(alpaPayload)
-              });
-              addedCount++;
+                for (const emp of employees) {
+                  const cleanNip = cleanNipStr(emp.nip);
+                  if (!cleanNip || presentNips.has(cleanNip)) continue;
+
+                  const logId = baseTs + (seq++);
+                  await pushLog({
+                    id: logId,
+                    category: "REGULER",
+                    shift: "-",
+                    date: todayStr,
+                    time: "15:00:00 WITA",
+                    nip: cleanNip,
+                    nip_display: emp.nip_display || cleanNip,
+                    nama: emp.nama,
+                    jabatan: emp.jabatan || "-",
+                    unit: emp.unit || "-",
+                    type: "ALPA",
+                    status: "TIDAK HADIR (ALPA)",
+                    isBypass: true,
+                    method: "GitHub Actions Cron Job"
+                  });
+                  addedReguler++;
+                }
+              } else {
+                console.log("Reguler dilewati karena hari Minggu / Libur Nasional.");
+              }
             }
 
-            // 5. Perbarui Status Med-Sync di Header Aplikasi
+            // =========================================================
+            // B. PROSES AUTO-ALPA DATANG JAGA & LEPAS JAGA (Setiap Hari)
+            // =========================================================
+            const shiftsToProcess = [];
+            if (mode === "shift1" || mode === "all") shiftsToProcess.push({ name: "Shift 1", cutoffTime: "14:15:00 WITA" });
+            if (mode === "shift2" || mode === "all") shiftsToProcess.push({ name: "Shift 2", cutoffTime: "20:15:00 WITA" });
+
+            for (const shiftObj of shiftsToProcess) {
+              const shiftName = shiftObj.name;
+              const jagaLogsThisShift = todayLogs.filter(
+                l => String(l.category || "").toUpperCase() === "JAGA" && matchShift(l.shift, shiftName)
+              );
+
+              // 1. Cek Petugas Terjadwal yang Tidak Datang Jaga
+              const scheduledRaw = todaySchedule[shiftName] || [];
+              const scheduledNips = Array.isArray(scheduledRaw)
+                ? scheduledRaw.map(cleanNipStr).filter(Boolean)
+                : Object.keys(scheduledRaw).filter(k => scheduledRaw[k]).map(cleanNipStr);
+
+              for (const schedNip of scheduledNips) {
+                const hasAnyShiftLog = jagaLogsThisShift.some(l => cleanNipStr(l.nip) === schedNip);
+                if (hasAnyShiftLog) continue;
+
+                const emp = empMap.get(schedNip);
+                if (!emp) continue;
+
+                const logId = baseTs + (seq++);
+                await pushLog({
+                  id: logId,
+                  category: "JAGA",
+                  shift: shiftName,
+                  date: todayStr,
+                  time: shiftObj.cutoffTime,
+                  nip: schedNip,
+                  nip_display: emp.nip_display || schedNip,
+                  nama: emp.nama,
+                  jabatan: emp.jabatan || "-",
+                  unit: emp.unit || "-",
+                  type: "ALPA",
+                  status: `TIDAK HADIR JAGA (${shiftName.toUpperCase()})`,
+                  isBypass: true,
+                  method: "GitHub Actions Cron Job"
+                });
+                addedDatangJaga++;
+              }
+
+              // 2. Cek Petugas yang Sudah Datang Jaga tapi Belum Lepas Jaga
+              const datangLogs = jagaLogsThisShift.filter(
+                l => String(l.type || "").toUpperCase() === "DATANG JAGA"
+              );
+
+              for (const dLog of datangLogs) {
+                const dNip = cleanNipStr(dLog.nip);
+                const alreadyClosed = jagaLogsThisShift.some(l => {
+                  if (cleanNipStr(l.nip) !== dNip) return false;
+                  const t = String(l.type || "").toUpperCase();
+                  return t === "LEPAS JAGA" || t === "ALPA LEPAS JAGA";
+                });
+
+                if (alreadyClosed) continue;
+
+                const logId = baseTs + (seq++);
+                await pushLog({
+                  id: logId,
+                  category: "JAGA",
+                  shift: shiftName,
+                  date: todayStr,
+                  time: shiftObj.cutoffTime,
+                  nip: dNip,
+                  nip_display: dLog.nip_display || dNip,
+                  nama: dLog.nama,
+                  jabatan: dLog.jabatan || "-",
+                  unit: dLog.unit || "-",
+                  type: "ALPA LEPAS JAGA",
+                  status: `ALPA LEPAS JAGA (${shiftName.toUpperCase()})`,
+                  isBypass: true,
+                  method: "GitHub Actions Cron Job"
+                });
+                addedLepasJaga++;
+              }
+            }
+
+            // Perbarui Status Med-Sync di Header Aplikasi
             await fetch(`${DB_URL}/system_status/last_cron_execution.json`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 status: "SUCCESS",
+                mode: mode,
                 date: todayStr,
                 time: `${timePart} WITA`,
-                total_alpa_added: addedCount
+                total_alpa_added: addedReguler + addedDatangJaga + addedLepasJaga,
+                detail: { reguler: addedReguler, datang_jaga: addedDatangJaga, lepas_jaga: addedLepasJaga }
               })
             });
 
-            console.log(`Selesai (${todayStr}): ${addedCount} pegawai otomatis dicatat ALPA.`);
+            console.log(`Selesai [${mode}] (${todayStr}): Reguler=${addedReguler}, DatangJaga=${addedDatangJaga}, LepasJaga=${addedLepasJaga}`);
           }
 
           run().catch(err => { console.error(err); process.exit(1); });
